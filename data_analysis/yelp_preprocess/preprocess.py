@@ -8,22 +8,14 @@ import types
 import argparse
 import sys
 
-dataPath = cf.ROOT_PATH + cf.DATA_PATH
-businessPath = dataPath + cf.BUSINESS
-stateAbbPath = dataPath + cf.STATE
-cityPath = dataPath + cf.CITY
-zipCodePath = dataPath + cf.ZIP_CODE
-categoryPath = dataPath + cf.CATEGORY
-businessIdPath = dataPath + cf.BUSINESS_ID
-reviewPath = dataPath + cf.REVIEW
-userPath = dataPath + cf.USER
-
 
 def parseBusiness():
     """
     parse business into separate and smaller json files by city and state which
     will be used in js, the separated business files are saved by city in stated
     folder, in json format
+    Business Ids are picked during parsing and used for filtering reviews in
+    parseReview()
     """
     def lookupZipcode(zipcode):
         for state in zipcodes:
@@ -66,11 +58,11 @@ def parseBusiness():
             zipcodes[state] = []
         zipcodes[state].append([int(d[3].text), int(d[4].text)])
     # parse state2abb.json file
-    states = {}
+    usStates = []
     with open(stateAbbPath) as s:
         stateDict = json.load(s)
         for state in stateDict.values():
-            states[state] = []
+            usStates.append(state)
     s.close()
     # parse us-cities.json file
     cities = []
@@ -90,6 +82,7 @@ def parseBusiness():
     # parse based on state
     with open(businessPath) as json_data:
         print('parsing business based on state names')
+        states = {}
         for i, line in enumerate((tqdm(json_data))):
             business = json.loads(line)
             state = business['state']
@@ -100,12 +93,14 @@ def parseBusiness():
             # # in the raw dataset, they were only used during initial scanning
             # address = business['address']
             # # filter out business that are not in the top 1000 cities or not a resturant
-            if state in states and city in cities and checkCategory(category):
+            if state in usStates and city in cities and checkCategory(category):
                 checkResult, foundState = checkZipcode(zipcode, state)
                 if not checkResult and foundState != '':
                     # print(i, address, zipcode, city, state, foundState)
                     state = foundState
                     business['state'] = foundState
+                if state not in states.keys():
+                    states[state] = []
                 states[state].append(business)
     json_data.close()
 
@@ -137,13 +132,15 @@ def parseBusiness():
 def parseReview():
     """
     parse review.json data, filter the reviews based on the businuss id picked
-    from each state and city, filtered review files are saved by state names and
-    use json format
+    from each state and city, filtered review files are saved by business ids in
+    json format and stored in the corresponding city folders.
+    Also generate the user id json files for each city, which will be used for
+    filtering user data in parseUser()
     """
-    def checkReviewState(id):
+    def checkReviewState(businessId):
         for state in businessIds.keys():
             for city in businessIds[state].keys():
-                if id in businessIds[state][city]:
+                if businessId in businessIds[state][city]:
                     return state, city
         return None, None
 
@@ -155,9 +152,15 @@ def parseReview():
             states[state] = []
     s.close()
     # read business-ids.txt
+    # check dependent files
+    directory = dataPath + 'business/'
+    if not os.path.exists(directory):
+        parseBusiness()
     businessIds = {}
     for state in states:
         directory = dataPath + 'business/' + state
+        if not os.path.exists(directory):
+            continue
         with open(directory + '/%s_business-ids.json' % state, 'r') as f:
             for line in f:
                 id = json.loads(line)
@@ -190,7 +193,8 @@ def parseReview():
         if not os.path.exists(directory):
             os.makedirs(directory)
         for city in userIds[state].keys():
-            directory = directory + '/%s' % city
+            directory = dataPath + 'user/' + state + '/%s' % city
+            print(directory)
             if not os.path.exists(directory):
                 os.makedirs(directory)
             with open(directory + '/%s_user-ids.json' % city, 'w+') as f:
@@ -202,7 +206,7 @@ def parseReview():
         if not os.path.exists(directory):
             os.makedirs(directory)
         for city in reviews[state].keys():
-            directory = directory + '/%s' % city
+            directory = dataPath + 'review/' + state + '/%s' % city
             if not os.path.exists(directory):
                 os.makedirs(directory)
             for businessId in reviews[state][city].keys():
@@ -225,6 +229,10 @@ def parseUser():
             states[state] = []
     s.close()
     # read %state_user-ids.json files
+    # check dependent files
+    directory = dataPath + 'user/'
+    if not os.path.exists(directory):
+        parseReview()
     userIds = []
     for state in states:
         directory = dataPath + 'business/' + state
@@ -245,7 +253,33 @@ def parseUser():
                 users.append(user)
     json_data.close()
 
+def preprocess():
+    """wrapper for parserUser"""
+    parseUser()
+
 if __name__ == '__main__':
+    """
+    To run the preprocess, you need all required raw data in the correct directory,
+    here is a list of the dependent data files:
+    Outside the root folder of the project, add the following path:
+    /data/yelp_dataset/
+    Then copy the following raw data files into the above folder:
+    "business.json"
+    "review.json"
+    "user.json"
+    "state2abb.json"
+    "us-cities.json"
+    "zip-code.xml"
+    "categories.txt"
+    "business-ids.txt"
+    The above data files can be downloaded from this link:
+    https://drive.google.com/open?id=11ZC2-xb5eTQtOU160BEIJUrV3ZHNUTcj
+
+    Modules in this script in dependent on one another, the correct sequence to
+    run is parseBusiness -> parseReview -> parseUser, use --full_run 1 flag to
+    run the script in this order. Other requests of running selected
+    module will by default run the dependent module first as necessary.
+    """
     argv = sys.argv[1:]
 
     parser = argparse.ArgumentParser()
@@ -255,12 +289,20 @@ if __name__ == '__main__':
     parser.add_argument('--full_run', type=int, choices=[0, 1], default=0)
 
     args, _ = parser.parse_known_args(argv)
+
+    dataPath = cf.ROOT_PATH + cf.DATA_PATH
+    businessPath = dataPath + cf.BUSINESS
+    stateAbbPath = dataPath + cf.STATE
+    cityPath = dataPath + cf.CITY
+    zipCodePath = dataPath + cf.ZIP_CODE
+    categoryPath = dataPath + cf.CATEGORY
+    businessIdPath = dataPath + cf.BUSINESS_ID
+    reviewPath = dataPath + cf.REVIEW
+    userPath = dataPath + cf.USER
+
     if args.full_run == 1 or args.user == 1:
-        parseBusiness()
-        parseReview()
-        parseUser()
+        preprocess()
     elif args.review == 1:
-        parseBusiness()
         parseReview()
     elif args.business == 1:
         parseBusiness()
