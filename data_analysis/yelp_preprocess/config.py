@@ -13,7 +13,7 @@ from pathlib import Path
 ROOT_PATH = os.path.abspath(os.path.join(__file__ ,"../../../.."))
 DATA_PATH = "/data/yelp_dataset/"
 BUSINESS = "business.json"
-REVIEW = "review_trial.json"
+REVIEW = "review.json"
 USER = "user_trial.json"
 STATE = "state2abb.json"
 CITY = "us-cities.json"

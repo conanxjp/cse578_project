@@ -5,6 +5,8 @@ import os
 from tqdm import tqdm
 import xml.etree.ElementTree as et
 import types
+import argparse
+import sys
 
 dataPath = cf.ROOT_PATH + cf.DATA_PATH
 businessPath = dataPath + cf.BUSINESS
@@ -20,7 +22,8 @@ userPath = dataPath + cf.USER
 def parseBusiness():
     """
     parse business into separate and smaller json files by city and state which
-    will be used in js
+    will be used in js, the separated business files are saved by city in stated
+    folder, in json format
     """
     def lookupZipcode(zipcode):
         for state in zipcodes:
@@ -68,6 +71,7 @@ def parseBusiness():
         stateDict = json.load(s)
         for state in stateDict.values():
             states[state] = []
+    s.close()
     # parse us-cities.json file
     cities = []
     with open(cityPath) as c:
@@ -75,11 +79,13 @@ def parseBusiness():
         cityDict = cityDict['features']
         for city in cityDict:
             cities.append(city['properties']['city'])
+    c.close()
     # read categoryies.txt file
     categories = []
     with open(categoryPath) as c:
         for line in c:
             categories.append(line[:-1])
+    c.close()
 
     # parse based on state
     with open(businessPath) as json_data:
@@ -101,6 +107,7 @@ def parseBusiness():
                     state = foundState
                     business['state'] = foundState
                 states[state].append(business)
+    json_data.close()
 
     # parse based on city in a state and write to city.json files in state folder
     print('parsing business based on city names')
@@ -129,6 +136,9 @@ def parseBusiness():
 
 def parseReview():
     """
+    parse review.json data, filter the reviews based on the businuss id picked
+    from each state and city, filtered review files are saved by state names and
+    use json format
     """
     def checkReviewState(id):
         for state in businessIds.keys():
@@ -143,6 +153,7 @@ def parseReview():
         stateDict = json.load(s)
         for state in stateDict.values():
             states[state] = []
+    s.close()
     # read business-ids.txt
     businessIds = {}
     for state in states:
@@ -158,7 +169,7 @@ def parseReview():
     reviews = {}
     with open(reviewPath) as json_data:
         print('parsing review data based on state names')
-        for i, line in enumerate(json_data):
+        for i, line in enumerate(tqdm(json_data)):
             review = json.loads(line)
             state, city = checkReviewState(review['business_id'])
             if state is not None:
@@ -167,32 +178,91 @@ def parseReview():
                     reviews[state] = {}
                 if city not in userIds[state].keys():
                     userIds[state][city] = []
-                    reviews[state][city] = []
+                    reviews[state][city] = {}
                 userIds[state][city].append(review['user_id'])
-                reviews[state][city].append(review)
+                if review['business_id'] not in reviews[state][city].keys():
+                    reviews[state][city][review['business_id']] = []
+                reviews[state][city][review['business_id']].append(review)
+    json_data.close()
 
     for state in userIds.keys():
-        directory = dataPath + 'business/' + state
-        with open(directory + '/%s_user-ids.json' % state, 'w+') as f:
-            json.dump(userIds[state], f)
-        f.close()
-        with open(directory + '/%s_reviews.json' % state, 'w+') as f:
-            json.dump(reviews[state], f)
-        f.close()
+        directory = dataPath + 'user/' + state
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        for city in userIds[state].keys():
+            directory = directory + '/%s' % city
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+            with open(directory + '/%s_user-ids.json' % city, 'w+') as f:
+                json.dump(userIds[state][city], f)
+            f.close()
+
+    for state in reviews.keys():
+        directory = dataPath + 'review/' + state
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        for city in reviews[state].keys():
+            directory = directory + '/%s' % city
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+            for businessId in reviews[state][city].keys():
+                with open(directory + '/%s_reviews.json' % businessId, 'w+') as f:
+                    json.dump(reviews[state][city][businessId], f)
+                f.close()
 
 
 def parseUser():
     """
-    parse user.json file
+    parse user.json data and filter out all users based on the user ids found in
+    the filtered reviews, the filtered users are saved in a single json file wICtovzHT9HW5SlWf3cQ
+    the 'friends' information dropped
     """
+    # parse state2abb.json file
+    states = {}
+    with open(stateAbbPath) as s:
+        stateDict = json.load(s)
+        for state in stateDict.values():
+            states[state] = []
+    s.close()
+    # read %state_user-ids.json files
+    userIds = []
+    for state in states:
+        directory = dataPath + 'business/' + state
+        with open(directory + '/%s_user-ids.json' % state, 'r') as f:
+            for line in f:
+                id = json.loads(line)
+                userIds.append(id)
+        f.close()
+
     # parse based on state
+    users = []
     with open(userPath) as json_data:
-        print('parsing user data based on state names')
+        print('parsing user data based on user-ids')
         for i, line in enumerate(json_data):
             user = json.loads(line)
-            print(user['user_id'])
-            print()
+            if user['user_id'] in userIds:
+                user = {key: value for key, value in user.items() if key != 'friends'}
+                users.append(user)
+    json_data.close()
 
-# parseBusiness()
-parseReview()
-# parseUser()
+if __name__ == '__main__':
+    argv = sys.argv[1:]
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--business', type=int, choices=[0, 1], default=0)
+    parser.add_argument('--review', type=int, choices=[0, 1], default=0)
+    parser.add_argument('--user', type=int, choices=[0, 1], default=0)
+    parser.add_argument('--full_run', type=int, choices=[0, 1], default=0)
+
+    args, _ = parser.parse_known_args(argv)
+    if args.full_run == 1 or args.user == 1:
+        parseBusiness()
+        parseReview()
+        parseUser()
+    elif args.review == 1:
+        parseBusiness()
+        parseReview()
+    elif args.business == 1:
+        parseBusiness()
+    else:
+        parser.print_help()
