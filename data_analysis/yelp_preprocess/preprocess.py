@@ -222,35 +222,57 @@ def parseUser():
     the 'friends' information dropped
     """
     # parse state2abb.json file
-    states = {}
+    usStates = []
     with open(stateAbbPath) as s:
         stateDict = json.load(s)
         for state in stateDict.values():
-            states[state] = []
+            usStates.append(state)
     s.close()
     # read %state_user-ids.json files
     # check dependent files
     directory = dataPath + 'user/'
     if not os.path.exists(directory):
         parseReview()
-    userIds = []
-    for state in states:
-        directory = dataPath + 'business/' + state
-        with open(directory + '/%s_user-ids.json' % state, 'r') as f:
-            for line in f:
-                id = json.loads(line)
-                userIds.append(id)
-        f.close()
 
-    # parse based on state
+    userIds = {}
+    print('read user ids in each city')
+    for state in usStates:
+        directory = dataPath + 'user/' + state
+        if not os.path.exists(directory):
+            continue
+        for subdir, _, files in tqdm(os.walk(directory)):
+            for file in files:
+                if "user-ids.json" in file:
+                    with open(os.path.join(subdir, file), 'r') as f:
+                        for line in f:
+                            ids = json.loads(line)
+                            for id in ids:
+                                if id not in userIds.keys():
+                                    userIds[id] = []
+                                if [state, file[:-14]] not in userIds[id]:
+                                    userIds[id].append([state, file[:-14]])
+                    f.close()
+
+    # parse user.json based on user id grouped by state and city
     users = []
     with open(userPath) as json_data:
-        print('parsing user data based on user-ids')
-        for i, line in enumerate(json_data):
+        print('parsing user data based on user ids')
+        for i, line in enumerate(tqdm(json_data)):
+            # if i > 500:
+            #     break
             user = json.loads(line)
-            if user['user_id'] in userIds:
-                user = {key: value for key, value in user.items() if key != 'friends'}
-                users.append(user)
+            id = user['user_id']
+            if id in userIds.keys():
+                for location in userIds[id]:
+                    directory = dataPath + 'user/%s/%s/' % (location[0], location[1])
+                    filepath = directory + '%s_users.json' % location[1]
+                    mode = 'a'
+                    if not os.path.exists(filepath):
+                        mode = 'w+'
+                    with open(filepath, mode) as f:
+                        user = {key: value for key, value in user.items() if key != 'friends'}
+                        json.dump(user, f)
+                    f.close()
     json_data.close()
 
 def preprocess():
@@ -300,11 +322,12 @@ if __name__ == '__main__':
     reviewPath = dataPath + cf.REVIEW
     userPath = dataPath + cf.USER
 
-    if args.full_run == 1 or args.user == 1:
-        preprocess()
-    elif args.review == 1:
-        parseReview()
-    elif args.business == 1:
-        parseBusiness()
-    else:
-        parser.print_help()
+    # if args.full_run == 1 or args.user == 1:
+    #     preprocess()
+    # elif args.review == 1:
+    #     parseReview()
+    # elif args.business == 1:
+    #     parseBusiness()
+    # else:
+    #     parser.print_help()
+    preprocess()
