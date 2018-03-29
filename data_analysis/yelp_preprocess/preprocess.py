@@ -132,7 +132,6 @@ def parseReview():
     Also generate the user id json files for each city, which will be used for
     filtering user data in parseUser()
     """
-
     usStates, businessIds = getBusinessInfo()
 
     # parse based on state
@@ -144,7 +143,7 @@ def parseReview():
             # if i > 1000:
             #     break
             review = json.loads(line)
-            state, city = checkReviewState(review['business_id'], businessIds)
+            state, city = checkBusinessLocation(review['business_id'], businessIds)
             if state is not None:
                 if state not in userIds.keys():
                     userIds[state] = {}
@@ -185,6 +184,42 @@ def parseReview():
                     json.dump(reviews[state][city][businessId], f)
                 f.close()
 
+def parseCheckIn():
+    """
+    parse the checkin.json file and separete the checkin information based on
+    state and city, reorganize the data as business id as key and time as value,
+    saved in json file
+    """
+    usStates, businessIds = getBusinessInfo()
+    checkins = {}
+    print('parse the checkin data based on business id')
+    with open(checkinPath) as f:
+        for i, line in enumerate(tqdm(f)):
+            # if i > 1000:
+            #     break
+            entry = json.loads(line)
+            id = entry['business_id']
+            state, city = checkBusinessLocation(id, businessIds)
+            if state is not None:
+                if state not in checkins.keys():
+                    checkins[state] = {}
+                if city not in checkins[state].keys():
+                    checkins[state][city] = {}
+                checkins[state][city][id] = entry['time']
+    f.close()
+
+    for state in checkins.keys():
+        directory = dataPath + 'checkin/' + state
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        for city in checkins[state].keys():
+            directory = dataPath + 'checkin/%s/%s/' % (state, city)
+            # print(directory)
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+            with open(directory + '%s_checkin.json' % city, 'w+') as f:
+                json.dump(checkins[state][city], f)
+            f.close()
 
 def parseUser():
     """
@@ -244,8 +279,8 @@ def parseUser():
     with open(userPath) as json_data:
         print('parsing user data based on user ids')
         for i, line in enumerate(tqdm(json_data)):
-            if i > 1000:
-                break
+            # if i > 1000:
+            #     break
             user = json.loads(line)
             id = user['user_id']
             if id in userIds.keys():
@@ -264,17 +299,8 @@ def parseUser():
                     f.close()
     json_data.close()
 
-def parseCheckIn():
-    """
-    parse the checkin.json file and separete the checkin information based on
-    state and city, reorganize the data as business id as key and time as value,
-    saved in json file
-    """
-    usStates, businessIds = getBusinessInfo()
 
-
-
-def checkReviewState(businessId, businessIds):
+def checkBusinessLocation(businessId, businessIds):
     for state in businessIds.keys():
         for city in businessIds[state].keys():
             if businessId in businessIds[state][city]:
@@ -308,12 +334,13 @@ def getBusinessInfo():
                 id = json.loads(line)
                 businessIds[state] = id
         f.close()
-    return usStates, businuessIds
+    return usStates, businessIds
 
 
 def preprocess():
-    """wrapper for parserUser"""
+    """wrapper for full run"""
     parseUser()
+    parseCheckin()
 
 if __name__ == '__main__':
     """
@@ -325,6 +352,7 @@ if __name__ == '__main__':
     "business.json"
     "review.json"
     "user.json"
+    "checkin.json"
     "state2abb.json"
     "us-cities.json"
     "zip-code.xml"
@@ -332,16 +360,18 @@ if __name__ == '__main__':
     The above data files can be downloaded from this link:
     https://drive.google.com/open?id=11ZC2-xb5eTQtOU160BEIJUrV3ZHNUTcj
 
-    Modules in this script in dependent on one another, the correct sequence to
-    run is parseBusiness -> parseReview -> parseUser, use --full_run 1 flag to
-    run the script in this order. Other requests of running selected
-    module will by default run the dependent module first as necessary.
+    Modules in this script in dependent on one another, the correct sequences to
+    run are parseBusiness -> parseReview -> parseUser or parseBusiness ->
+    parseCheckIn, use --full_run 1 flag to run the script in this order.
+    Other requests of running selected module will by default run the dependent
+    module first as necessary.
     """
     argv = sys.argv[1:]
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--business', type=int, choices=[0, 1], default=0)
     parser.add_argument('--review', type=int, choices=[0, 1], default=0)
+    parser.add_argument('--checkin', type=int, choices=[0, 1], default=0)
     parser.add_argument('--user', type=int, choices=[0, 1], default=0)
     parser.add_argument('--full_run', type=int, choices=[0, 1], default=0)
 
@@ -355,14 +385,15 @@ if __name__ == '__main__':
     categoryPath = dataPath + cf.CATEGORY
     reviewPath = dataPath + cf.REVIEW
     userPath = dataPath + cf.USER
+    checkinPath = dataPath + cf.CHECKIN
 
-    # if args.full_run == 1 or args.user == 1:
-    #     preprocess()
-    # elif args.review == 1:
-    #     parseReview()
-    # elif args.business == 1:
-    #     parseBusiness()
-    # else:
-    #     parser.print_help()
-    # preprocess()
-    parseReview()
+    if args.full_run == 1 or args.user == 1:
+        preprocess()
+    elif args.review == 1:
+        parseReview()
+    elif args.checkin == 1:
+        parseCheckIn()
+    elif args.business == 1:
+        parseBusiness()
+    else:
+        parser.print_help()
