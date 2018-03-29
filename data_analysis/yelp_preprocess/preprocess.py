@@ -7,6 +7,7 @@ import xml.etree.ElementTree as et
 import types
 import argparse
 import sys
+import csv
 
 
 def parseBusiness():
@@ -254,7 +255,27 @@ def parseUser():
                     f.close()
 
     # parse user.json based on user id grouped by state and city
-    users = []
+    headers = ['user_id',
+                'name',
+                'review_count',
+                'yelping_since',
+                'useful',
+                'funny',
+                'cool',
+                'fans',
+                'elite',
+                'average_stars',
+                'compliment_hot',
+                'compliment_more',
+                'compliment_profile',
+                'compliment_cute',
+                'compliment_list',
+                'compliment_note',
+                'compliment_plain',
+                'compliment_cool',
+                'compliment_funny',
+                'compliment_writer',
+                'compliment_photos']
     with open(userPath) as json_data:
         print('parsing user data based on user ids')
         for i, line in enumerate(tqdm(json_data)):
@@ -265,15 +286,29 @@ def parseUser():
             if id in userIds.keys():
                 for location in userIds[id]:
                     directory = dataPath + 'user/%s/%s/' % (location[0], location[1])
-                    filepath = directory + '%s_users.json' % location[1]
+                    filepath = directory + '%s_users.csv' % location[1]
                     mode = 'a'
                     if not os.path.exists(filepath):
                         mode = 'w+'
                     with open(filepath, mode) as f:
+                        writer = csv.DictWriter(f, fieldnames=headers)
+                        if mode == 'w+':
+                            writer.writeheader()
                         user = {key: value for key, value in user.items() if key != 'friends'}
-                        json.dump(user, f)
+                        writer.writerow(user)
                     f.close()
     json_data.close()
+
+    for state in usStates:
+        directory = dataPath + 'user/' + state
+        if not os.path.exists(directory):
+            continue
+        for subdir, _, files in os.walk(directory):
+            for file in files:
+                if '.csv' in file:
+                    with open(os.path.join(subdir, file), 'a') as f:
+                        writer = csv.DictWriter(f, fieldnames=headers)
+                        writer.writeheader()
 
 def preprocess():
     """wrapper for parserUser"""
