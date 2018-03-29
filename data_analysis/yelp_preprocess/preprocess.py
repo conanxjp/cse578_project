@@ -58,13 +58,7 @@ def parseBusiness():
         if state not in zipcodes:
             zipcodes[state] = []
         zipcodes[state].append([int(d[3].text), int(d[4].text)])
-    # parse state2abb.json file
-    usStates = []
-    with open(stateAbbPath) as s:
-        stateDict = json.load(s)
-        for state in stateDict.values():
-            usStates.append(state)
-    s.close()
+    usStates = getStateAbbs()
     # parse us-cities.json file
     cities = []
     with open(cityPath) as c:
@@ -138,35 +132,8 @@ def parseReview():
     Also generate the user id json files for each city, which will be used for
     filtering user data in parseUser()
     """
-    def checkReviewState(businessId):
-        for state in businessIds.keys():
-            for city in businessIds[state].keys():
-                if businessId in businessIds[state][city]:
-                    return state, city
-        return None, None
 
-    # parse state2abb.json file
-    states = {}
-    with open(stateAbbPath) as s:
-        stateDict = json.load(s)
-        for state in stateDict.values():
-            states[state] = []
-    s.close()
-    # read business-ids.txt
-    # check dependent files
-    directory = dataPath + 'business/'
-    if not os.path.exists(directory):
-        parseBusiness()
-    businessIds = {}
-    for state in states:
-        directory = dataPath + 'business/' + state
-        if not os.path.exists(directory):
-            continue
-        with open(directory + '/%s_business-ids.json' % state, 'r') as f:
-            for line in f:
-                id = json.loads(line)
-                businessIds[state] = id
-        f.close()
+    usStates, businessIds = getBusinessInfo()
 
     # parse based on state
     userIds = {}
@@ -174,19 +141,22 @@ def parseReview():
     with open(reviewPath) as json_data:
         print('parsing review data based on state names')
         for i, line in enumerate(tqdm(json_data)):
+            # if i > 1000:
+            #     break
             review = json.loads(line)
-            state, city = checkReviewState(review['business_id'])
+            state, city = checkReviewState(review['business_id'], businessIds)
             if state is not None:
                 if state not in userIds.keys():
                     userIds[state] = {}
                     reviews[state] = {}
                 if city not in userIds[state].keys():
-                    userIds[state][city] = []
+                    userIds[state][city] = {}
                     reviews[state][city] = {}
-                userIds[state][city].append(review['user_id'])
                 if review['business_id'] not in reviews[state][city].keys():
+                    userIds[state][city][review['business_id']] = []
                     reviews[state][city][review['business_id']] = []
                 reviews[state][city][review['business_id']].append(review)
+                userIds[state][city][review['business_id']].append(review['user_id'])
     json_data.close()
 
     for state in userIds.keys():
@@ -195,12 +165,12 @@ def parseReview():
             os.makedirs(directory)
         for city in userIds[state].keys():
             directory = dataPath + 'user/' + state + '/%s' % city
-            print(directory)
             if not os.path.exists(directory):
                 os.makedirs(directory)
-            with open(directory + '/%s_user-ids.json' % city, 'w+') as f:
-                json.dump(userIds[state][city], f)
-            f.close()
+            for businessId in userIds[state][city].keys():
+                with open(directory + '/%s_user-ids.json' % businessId, 'w+') as f:
+                    json.dump(userIds[state][city][businessId], f)
+                f.close()
 
     for state in reviews.keys():
         directory = dataPath + 'review/' + state
@@ -222,13 +192,7 @@ def parseUser():
     the filtered reviews, the filtered users are saved in a single json file wICtovzHT9HW5SlWf3cQ
     the 'friends' information dropped
     """
-    # parse state2abb.json file
-    usStates = []
-    with open(stateAbbPath) as s:
-        stateDict = json.load(s)
-        for state in stateDict.values():
-            usStates.append(state)
-    s.close()
+    usStates = getStateAbbs()
     # read %state_user-ids.json files
     # check dependent files
     directory = dataPath + 'user/'
@@ -236,7 +200,7 @@ def parseUser():
         parseReview()
 
     userIds = {}
-    print('read user ids in each city')
+    print('read user ids reviewed for each business id')
     for state in usStates:
         directory = dataPath + 'user/' + state
         if not os.path.exists(directory):
@@ -248,10 +212,11 @@ def parseUser():
                         for line in f:
                             ids = json.loads(line)
                             for id in ids:
+                                city = subdir.split('/')[-1]
                                 if id not in userIds.keys():
                                     userIds[id] = []
-                                if [state, file[:-14]] not in userIds[id]:
-                                    userIds[id].append([state, file[:-14]])
+                                if [state, city, file[:-14]] not in userIds[id]:
+                                    userIds[id].append([state, city, file[:-14]])
                     f.close()
 
     # parse user.json based on user id grouped by state and city
@@ -279,14 +244,14 @@ def parseUser():
     with open(userPath) as json_data:
         print('parsing user data based on user ids')
         for i, line in enumerate(tqdm(json_data)):
-            # if i > 500:
-            #     break
+            if i > 1000:
+                break
             user = json.loads(line)
             id = user['user_id']
             if id in userIds.keys():
                 for location in userIds[id]:
                     directory = dataPath + 'user/%s/%s/' % (location[0], location[1])
-                    filepath = directory + '%s_users.csv' % location[1]
+                    filepath = directory + '%s_users.csv' % location[2]
                     mode = 'a'
                     if not os.path.exists(filepath):
                         mode = 'w+'
@@ -299,16 +264,52 @@ def parseUser():
                     f.close()
     json_data.close()
 
+def parseCheckIn():
+    """
+    parse the checkin.json file and separete the checkin information based on
+    state and city, reorganize the data as business id as key and time as value,
+    saved in json file
+    """
+    usStates, businessIds = getBusinessInfo()
+
+
+
+def checkReviewState(businessId, businessIds):
+    for state in businessIds.keys():
+        for city in businessIds[state].keys():
+            if businessId in businessIds[state][city]:
+                return state, city
+    return None, None
+
+def getStateAbbs():
+    # parse state2abb.json file
+    usStates = []
+    with open(stateAbbPath) as s:
+        stateDict = json.load(s)
+        for state in stateDict.values():
+            usStates.append(state)
+    s.close()
+    return usStates
+
+def getBusinessInfo():
+    usStates = getStateAbbs()
+    # read business-ids.txt
+    # check dependent files
+    directory = dataPath + 'business/'
+    if not os.path.exists(directory):
+        parseBusiness()
+    businessIds = {}
     for state in usStates:
-        directory = dataPath + 'user/' + state
+        directory = dataPath + 'business/' + state
         if not os.path.exists(directory):
             continue
-        for subdir, _, files in os.walk(directory):
-            for file in files:
-                if '.csv' in file:
-                    with open(os.path.join(subdir, file), 'a') as f:
-                        writer = csv.DictWriter(f, fieldnames=headers)
-                        writer.writeheader()
+        with open(directory + '/%s_business-ids.json' % state, 'r') as f:
+            for line in f:
+                id = json.loads(line)
+                businessIds[state] = id
+        f.close()
+    return usStates, businuessIds
+
 
 def preprocess():
     """wrapper for parserUser"""
@@ -328,7 +329,6 @@ if __name__ == '__main__':
     "us-cities.json"
     "zip-code.xml"
     "categories.txt"
-    "business-ids.txt"
     The above data files can be downloaded from this link:
     https://drive.google.com/open?id=11ZC2-xb5eTQtOU160BEIJUrV3ZHNUTcj
 
@@ -353,7 +353,6 @@ if __name__ == '__main__':
     cityPath = dataPath + cf.CITY
     zipCodePath = dataPath + cf.ZIP_CODE
     categoryPath = dataPath + cf.CATEGORY
-    businessIdPath = dataPath + cf.BUSINESS_ID
     reviewPath = dataPath + cf.REVIEW
     userPath = dataPath + cf.USER
 
@@ -365,4 +364,5 @@ if __name__ == '__main__':
     #     parseBusiness()
     # else:
     #     parser.print_help()
-    preprocess()
+    # preprocess()
+    parseReview()

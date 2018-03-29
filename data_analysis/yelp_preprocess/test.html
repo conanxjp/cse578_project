@@ -9,12 +9,12 @@
 
     <script type="text/javascript">
       test = null
-      d3.csv('./Las Vegas_users.csv', function(error, data) {
+      d3.json('./Las Vegas.json', function(error, data) {
         test = data
-        // console.log(data);
-        data.forEach(function(d, i) {
-          console.log(i, d['user_id']);
-        });
+        console.log(data);
+        // data.forEach(function(d, i) {
+        //   console.log(i, d['user_id']);
+        // });
       })
     </script>
   </body>
