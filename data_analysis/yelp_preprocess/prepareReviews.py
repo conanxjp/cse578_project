@@ -31,8 +31,8 @@ def loadReviews():
     with open(reviewPath) as json_data:
         print('parsing review data based on state names')
         for i, line in enumerate(tqdm(json_data)):
-            # if i > 1000:
-            #     break
+            if i > 1000:
+                break
             review = json.loads(line)
             state, city = pp.checkBusinessLocation(review['business_id'], businessIds)
             if state is not None:
@@ -52,25 +52,37 @@ def cleanReviewText():
     clean the review text
     """
     directory = dataPath + 'processed_reviews/'
+    print('load dictionary')
     dictionary = getDict(dictPath)
     usStates = pp.getStateAbbs(stateAbbPath)
-    for state in usStates:
-        filepath = directory + '%_reviews.csv' % state
+    for state in tqdm(usStates):
+        filepath = directory + '%s_reviews.csv' % state
+        texts = []
         if os.path.exists(filepath):
-            
-    for _, _, files in tqdm(os.walk(directory)):
-        for file in files:
-            texts = []
-            if '_reviews.csv' in file:
-                state = file[0:2]
-                reviews = pd.read_csv(os.path.join(directory, file), 'r')
-                for i, review in enumerate(reviews):
-                    # texts[review['review_id']] = []
-                    text = sent_tokenize(reviews['text'])
+            with open(filepath) as csv_file:
+                csv_reader = csv.reader(csv_file)
+                next(csv_reader)
+                for i, review in enumerate(csv_reader):
+                    text = sent_tokenize(review[5])
                     text = cleanup(text, dictionary)
-                    reviews.loc[i]['text'] = text
+                    csv_reader[i][5] = text
                     [texts.append(sentence) for sentence in text]
+            print('create %s vocabulary' % state)
             createStateVocabulary(texts, state)
+
+    # for _, _, files in tqdm(os.walk(directory)):
+    #     for file in files:
+    #         texts = []
+    #         if '_reviews.csv' in file:
+    #             state = file[0:2]
+    #             reviews = pd.read_csv(os.path.join(directory, file), 'r')
+    #             for i, review in enumerate(reviews):
+    #                 # texts[review['review_id']] = []
+    #                 text = sent_tokenize(reviews['text'])
+    #                 text = cleanup(text, dictionary)
+    #                 reviews.loc[i]['text'] = text
+    #                 [texts.append(sentence) for sentence in text]
+    #         createStateVocabulary(texts, state)
 
 def cleanup(text, dictionary):
     text = cleanOp(text, re.compile(r'-'), dictionary, correctDashWord)
@@ -210,4 +222,5 @@ if __name__ == '__main__':
     stateAbbPath = dataPath + cf.STATE
     reviewPath = dataPath + cf.REVIEW
     dictPath = dataPath + cf.DICT
-    loadReviews()
+    # loadReviews()
+    cleanReviewText()
