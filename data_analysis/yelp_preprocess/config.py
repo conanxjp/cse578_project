@@ -12,6 +12,7 @@ from pathlib import Path
 ###################################################
 ROOT_PATH = os.path.abspath(os.path.join(__file__ ,"../../../.."))
 DATA_PATH = "/data/yelp_dataset/"
+# paths for preprocess
 BUSINESS  = "business.json"
 REVIEW    = "review.json"
 USER      = "user.json"
@@ -20,3 +21,5 @@ STATE     = "state2abb.json"
 CITY      = "us-cities.json"
 ZIP_CODE  = "zip-code.xml"
 CATEGORY  = "categories.txt"
+# paths for prepareReviews
+DICT      = "glove.42B.300d.txt"

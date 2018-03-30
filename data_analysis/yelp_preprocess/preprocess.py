@@ -307,7 +307,7 @@ def checkBusinessLocation(businessId, businessIds):
                 return state, city
     return None, None
 
-def getStateAbbs():
+def getStateAbbs(stateAbbPath):
     # parse state2abb.json file
     usStates = []
     with open(stateAbbPath) as s:
