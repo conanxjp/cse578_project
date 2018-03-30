@@ -58,7 +58,7 @@ def parseBusiness():
         if state not in zipcodes:
             zipcodes[state] = []
         zipcodes[state].append([int(d[3].text), int(d[4].text)])
-    usStates = getStateAbbs()
+    usStates = getStateAbbs(stateAbbPath)
     # parse us-cities.json file
     cities = []
     with open(cityPath) as c:
@@ -132,7 +132,7 @@ def parseReview():
     Also generate the user id json files for each city, which will be used for
     filtering user data in parseUser()
     """
-    usStates, businessIds = getBusinessInfo()
+    usStates, businessIds = getBusinessInfo(stateAbbPath, dataPath)
 
     # parse based on state
     userIds = {}
@@ -190,7 +190,7 @@ def parseCheckIn():
     state and city, reorganize the data as business id as key and time as value,
     saved in json file
     """
-    usStates, businessIds = getBusinessInfo()
+    usStates, businessIds = getBusinessInfo(stateAbbPath, dataPath)
     checkins = {}
     print('parse the checkin data based on business id')
     with open(checkinPath) as f:
@@ -227,7 +227,7 @@ def parseUser():
     the filtered reviews, the filtered users are saved in a single json file wICtovzHT9HW5SlWf3cQ
     the 'friends' information dropped
     """
-    usStates = getStateAbbs()
+    usStates = getStateAbbs(stateAbbPath)
     # read %state_user-ids.json files
     # check dependent files
     directory = dataPath + 'user/'
@@ -317,8 +317,8 @@ def getStateAbbs(stateAbbPath):
     s.close()
     return usStates
 
-def getBusinessInfo():
-    usStates = getStateAbbs()
+def getBusinessInfo(stateAbbPath, dataPath):
+    usStates = getStateAbbs(stateAbbPath)
     # read business-ids.txt
     # check dependent files
     directory = dataPath + 'business/'

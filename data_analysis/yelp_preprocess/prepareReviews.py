@@ -6,6 +6,7 @@ from nltk import (word_tokenize, pos_tag)
 import hunspell
 import argparse
 import sys
+import csv
 import os
 import re
 from tqdm import tqdm
@@ -19,33 +20,32 @@ def loadReviews():
     load all reviews for each business id, consolidate them based on state and
     store as csv file for further preprocessing the text in them
     """
-    usStates = pp.getStateAbbs(stateAbbPath)
-    for state in usStates:
-        directory = dataPath + 'review/' + state
-        if not os.path.exists(directory):
-            continue
-        reviews = pd.DataFrame(columns = ['review_id', 'user_id', 'business_id', 'stars', 'date', 'text', 'useful', 'funny', 'cool'])
-        i = 0
-        for subdir, _, files in tqdm(os.walk(directory)):
-            for j, file in enumerate(files):
-                # if j > 2:
-                #     break
-                if '_reviews.json' in file:
-                    city = subdir.split('/')[-1]
-                    print('load %s in %s, %s' % (file, city, state))
-                    with open(os.path.join(subdir, file), 'r') as f:
-                        for line in f:
-                            data = json.loads(line)
+    usStates, businessIds = pp.getBusinessInfo(stateAbbPath, dataPath)
 
-                            for review in data:
-                                reviews.loc[i] = [review[col] for col in reviews.columns.values]
-                                i = i + 1
-                    f.close()
-        directory = dataPath + 'processed_reviews/'
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        print('write %s reviews to csv file' % state)
-        reviews.to_csv(directory + '%s_reviews.csv' % state)
+    # parse based on state
+    headers = ['review_id', 'user_id', 'business_id', 'stars', 'date', 'text', 'useful', 'funny', 'cool']
+    directory = dataPath + 'processed_reviews'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    with open(reviewPath) as json_data:
+        print('parsing review data based on state names')
+        for i, line in enumerate(tqdm(json_data)):
+            # if i > 1000:
+            #     break
+            review = json.loads(line)
+            state, city = pp.checkBusinessLocation(review['business_id'], businessIds)
+            if state is not None:
+                filepath = directory + '/%s_reviews.csv' % state
+                mode = 'a'
+                if not os.path.exists(filepath):
+                    mode = 'w+'
+                with open(filepath, mode) as f:
+                    writer = csv.DictWriter(f, fieldnames=headers)
+                    if mode == 'w+':
+                        writer.writeheader()
+                    writer.writerow(review)
+    json_data.close()
+
 
 def cleanReviewText():
     """
@@ -203,5 +203,6 @@ if __name__ == '__main__':
 
     dataPath = cf.ROOT_PATH + cf.DATA_PATH
     stateAbbPath = dataPath + cf.STATE
+    reviewPath = dataPath + cf.REVIEW
     dictPath = dataPath + cf.DICT
     loadReviews()
