@@ -17,8 +17,9 @@ import preprocess as pp
 
 def loadReviews():
     """
-    load all reviews for each business id, consolidate them based on state and
-    store as csv file for further preprocessing the text in them
+    load review.json file and filter the reviews based on business ids,
+    consolidate them based on state and store as csv file for further
+    preprocessing the text in them
     """
     usStates, businessIds = pp.getBusinessInfo(stateAbbPath, dataPath)
 
@@ -46,13 +47,17 @@ def loadReviews():
                     writer.writerow(review)
     json_data.close()
 
-
 def cleanReviewText():
     """
     clean the review text
     """
     directory = dataPath + 'processed_reviews/'
     dictionary = getDict(dictPath)
+    usStates = pp.getStateAbbs(stateAbbPath)
+    for state in usStates:
+        filepath = directory + '%_reviews.csv' % state
+        if os.path.exists(filepath):
+            
     for _, _, files in tqdm(os.walk(directory)):
         for file in files:
             texts = []

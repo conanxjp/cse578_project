@@ -238,21 +238,20 @@ def parseUser():
     print('read user ids reviewed for each business id')
     for state in usStates:
         directory = dataPath + 'user/' + state
-        if not os.path.exists(directory):
-            continue
-        for subdir, _, files in tqdm(os.walk(directory)):
-            for file in files:
-                if "user-ids.json" in file:
-                    with open(os.path.join(subdir, file), 'r') as f:
-                        for line in f:
-                            ids = json.loads(line)
-                            for id in ids:
-                                city = subdir.split('/')[-1]
-                                if id not in userIds.keys():
-                                    userIds[id] = []
-                                if [state, city, file[:-14]] not in userIds[id]:
-                                    userIds[id].append([state, city, file[:-14]])
-                    f.close()
+        if os.path.exists(directory):
+            for subdir, _, files in tqdm(os.walk(directory)):
+                for file in files:
+                    if "user-ids.json" in file:
+                        with open(os.path.join(subdir, file), 'r') as f:
+                            for line in f:
+                                ids = json.loads(line)
+                                for id in ids:
+                                    city = subdir.split('/')[-1]
+                                    if id not in userIds.keys():
+                                        userIds[id] = []
+                                    if [state, city, file[:-14]] not in userIds[id]:
+                                        userIds[id].append([state, city, file[:-14]])
+                        f.close()
 
     # parse user.json based on user id grouped by state and city
     headers = ['user_id',
@@ -327,13 +326,12 @@ def getBusinessInfo(stateAbbPath, dataPath):
     businessIds = {}
     for state in usStates:
         directory = dataPath + 'business/' + state
-        if not os.path.exists(directory):
-            continue
-        with open(directory + '/%s_business-ids.json' % state, 'r') as f:
-            for line in f:
-                id = json.loads(line)
-                businessIds[state] = id
-        f.close()
+        if os.path.exists(directory):
+            with open(directory + '/%s_business-ids.json' % state, 'r') as f:
+                for line in f:
+                    id = json.loads(line)
+                    businessIds[state] = id
+            f.close()
     return usStates, businessIds
 
 
