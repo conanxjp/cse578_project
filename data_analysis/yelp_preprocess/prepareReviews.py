@@ -55,13 +55,17 @@ def cleanReviewText():
     dictionary = getDict(dictPath)
     for _, _, files in tqdm(os.walk(directory)):
         for file in files:
-            texts = {}
+            texts = []
             if '_reviews.csv' in file:
+                state = file[0:2]
                 reviews = pd.read_csv(os.path.join(directory, file), 'r')
-                for review in reviews:
-                    texts[review['review_id']] = []
-                    text = sent_tokenize(reviews['text']
-                    texts[review['review_id']].append(cleanup(text, dictionary)))
+                for i, review in enumerate(reviews):
+                    # texts[review['review_id']] = []
+                    text = sent_tokenize(reviews['text'])
+                    text = cleanup(text, dictionary)
+                    reviews.loc[i]['text'] = text
+                    [texts.append(sentence) for sentence in text]
+            createStateVocabulary(texts, state)
 
 def cleanup(text, dictionary):
     text = cleanOp(text, re.compile(r'-'), dictionary, correctDashWord)
@@ -140,8 +144,6 @@ def cleanNumber(word):
         num = search.group()
         return word[:pos] + ' %s ' % num + parseNumber(word[pos+len(num):])
 
-# def translateSymbol(word):
-
 def checkSpell(word):
     global hobj
     return hobj.spell(word)
@@ -154,12 +156,6 @@ def correctSpell(word):
         return suggestions[distance.index(min(distance))]
     else:
         return word
-
-def createTempVocabulary(wordData, args):
-    words = sorted(set([word for l in wordData for word in l.split(' ')]))
-    global embeddingPath
-    vocabulary = filterWordEmbedding(words, embeddingPath, args)
-    return vocabulary
 
 def splitDashWord(word):
     if '-' not in word:
@@ -176,6 +172,32 @@ def correctDashWord(word):
         if not checkSpell(word):
             splittedWords[i] = correctSpell(word)
     return ''.join([s + '-' for s in splittedWords])[:-1]
+
+def createStateVocabulary(texts, state):
+    words = sorted(set([word for l in texts for word in l.split(' ')]))
+    global dictPath
+    vocabulary = filterWordEmbedding(words, dictPath, state)
+    return vocabulary
+
+def filterWordEmbedding(words, dictPath, state):
+    vocabulary = []
+    filteredDict = []
+    words = [word.lower() for word in words]
+    with open(dictPath) as f:
+        for line in tqdm(f):
+            values = line.split()
+            word = values[0]
+            if word in words:
+                vocabulary.append(word)
+                filteredDict.append(line)
+    f.close()
+    unknownWords = [word for word in words if word not in vocabulary]
+    with open(dataPath + '%s_%s.txt' % (cf.DICT[0:-4], state), 'w+') as f:
+        for line in filteredDict:
+            f.write(line)
+    with open('%s_unknown.txt' % state, 'w+') as f:
+        for i, word in enumerate(unknownWords):
+            f.write(word + '\n')
 
 
 if __name__ == '__main__':
