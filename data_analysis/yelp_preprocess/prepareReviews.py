@@ -199,7 +199,6 @@ def filterWordEmbedding(words, dictPath, state):
         for i, word in enumerate(unknownWords):
             f.write(word + '\n')
 
-
 if __name__ == '__main__':
 
     dataPath = cf.ROOT_PATH + cf.DATA_PATH
