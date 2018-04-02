@@ -23,3 +23,6 @@ ZIP_CODE  = "zip-code.xml"
 CATEGORY  = "categories.txt"
 # paths for prepareReviews
 DICT      = "glove.42B.300d.txt"
+# path for hunspell configurations
+HUNSPELL_PATH = "/usr/share/hunspell/"
+HUNSPELL_DICT = ["en_US.dic", "en_US.aff"]

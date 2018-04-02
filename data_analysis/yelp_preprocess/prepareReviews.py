@@ -26,26 +26,35 @@ def loadReviews():
     # parse based on state
     headers = ['review_id', 'user_id', 'business_id', 'stars', 'date', 'text', 'useful', 'funny', 'cool']
     directory = dataPath + 'processed_reviews'
+    reviews = {}
     if not os.path.exists(directory):
         os.makedirs(directory)
     with open(reviewPath) as json_data:
         print('parsing review data based on state names')
         for i, line in enumerate(tqdm(json_data)):
-            if i > 1000:
+            if i > 500:
                 break
             review = json.loads(line)
             state, city = pp.checkBusinessLocation(review['business_id'], businessIds)
             if state is not None:
+                # print(list(review.values()))
+                # if state not in reviews.keys():
+                #     reviews[state] = []
+                # reviews[state].append(review.values())
                 filepath = directory + '/%s_reviews.csv' % state
                 mode = 'a'
                 if not os.path.exists(filepath):
                     mode = 'w+'
                 with open(filepath, mode) as f:
-                    writer = csv.DictWriter(f, fieldnames=headers)
+                    writer = csv.writer(f)
                     if mode == 'w+':
-                        writer.writeheader()
-                    writer.writerow(review)
-    json_data.close()
+                        writer.writerow(headers)
+                    writer.writerow(review.values())
+    # json_data.close()
+    # for state, review in reviews.items():
+    #     filepath = directory + '/%s_reviews.csv' % state
+    #     review_df = pd.DataFrame(review, columns = headers)
+    #     review_df.to_csv(filepath)
 
 def cleanReviewText():
     """
@@ -59,30 +68,16 @@ def cleanReviewText():
         filepath = directory + '%s_reviews.csv' % state
         texts = []
         if os.path.exists(filepath):
-            with open(filepath) as csv_file:
-                csv_reader = csv.reader(csv_file)
-                next(csv_reader)
-                for i, review in enumerate(csv_reader):
-                    text = sent_tokenize(review[5])
-                    text = cleanup(text, dictionary)
-                    csv_reader[i][5] = text
-                    [texts.append(sentence) for sentence in text]
+            reviews = pd.read_csv(filepath)
+            for i, text in enumerate(reviews['text']):
+                text = sent_tokenize(text)
+                text = cleanup(text, dictionary)
+                reviews.at[i, 'text'] = text
+                [texts.append(sentence) for sentence in text]
+            cleanFilepath = directory + '%s_clean_reviews.csv' % state
+            reviews.to_csv(cleanFilepath)
             print('create %s vocabulary' % state)
             createStateVocabulary(texts, state)
-
-    # for _, _, files in tqdm(os.walk(directory)):
-    #     for file in files:
-    #         texts = []
-    #         if '_reviews.csv' in file:
-    #             state = file[0:2]
-    #             reviews = pd.read_csv(os.path.join(directory, file), 'r')
-    #             for i, review in enumerate(reviews):
-    #                 # texts[review['review_id']] = []
-    #                 text = sent_tokenize(reviews['text'])
-    #                 text = cleanup(text, dictionary)
-    #                 reviews.loc[i]['text'] = text
-    #                 [texts.append(sentence) for sentence in text]
-    #         createStateVocabulary(texts, state)
 
 def cleanup(text, dictionary):
     text = cleanOp(text, re.compile(r'-'), dictionary, correctDashWord)
@@ -91,7 +86,7 @@ def cleanup(text, dictionary):
     text = cleanOp(text, re.compile('\+'), dictionary, cleanPlus)
     text = cleanOp(text, re.compile(r'\d+'), dictionary, cleanNumber)
     text = cleanOp(text, re.compile(r''), dictionary, correctSpell)
-    return wordData
+    return text
 
 def getDict(dictPath):
     dictionary = []
@@ -103,21 +98,21 @@ def getDict(dictPath):
     f.close()
     return dictionary
 
-def spellcheck(wordData):
+def spellcheck(text):
     dictionary = embeddingDict(embeddingPath)
-    wordData = cleanOp(wordData, re.compile(r''), dictionary, correctSpell)
-    return wordData
+    text = cleanOp(text, re.compile(r''), dictionary, correctSpell)
+    return text
 
-def cleanOp(wordData, regex, dictionary, op):
-    for i, sentence in enumerate(wordData):
+def cleanOp(text, regex, dictionary, op):
+    for i, sentence in enumerate(text):
         if bool(regex.search(sentence)):
             newSentence = ''
             for word in word_tokenize(sentence.lower()):
                 if bool(regex.search(word)) and word not in dictionary:
                     word = op(word)
                 newSentence = newSentence + ' ' + word
-            wordData[i] = newSentence[1:]
-    return wordData
+            text[i] = newSentence[1:]
+    return text
 
 def cleanTime(word):
     time_re = re.compile(r'^(([01]?\d|2[0-3]):([0-5]\d)|24:00)(pm|am)?$')
@@ -209,12 +204,32 @@ def filterWordEmbedding(words, dictPath, state):
                 filteredDict.append(line)
     f.close()
     unknownWords = [word for word in words if word not in vocabulary]
-    with open(dataPath + '%s_%s.txt' % (cf.DICT[0:-4], state), 'w+') as f:
+    directory = dataPath + 'state dictionaries/'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    with open(directory + '%s_%s.txt' % (cf.DICT[0:-4], state), 'w+') as f:
         for line in filteredDict:
             f.write(line)
-    with open('%s_unknown.txt' % state, 'w+') as f:
+    with open(directory + '%s_unknown.txt' % state, 'w+') as f:
         for i, word in enumerate(unknownWords):
             f.write(word + '\n')
+
+def createVocabulary():
+    usStates = pp.getStateAbbs(stateAbbPath)
+    dictionary = []
+    directory = dataPath + 'state dictionaries/'
+    for state in usStates:
+        filepath = directory + '%s_%s.txt' % (cf.DICT[0:-4], state)
+        if os.path.exists(filepath):
+            with open(filepath, 'r') as f:
+                for line in tqdm(f):
+                    dictionary.append(line)
+            f.close()
+    with open(directory + '%s_filtered.txt' % cf.DICT[0:-4], 'w+') as f:
+        for line in set(dictionary):
+            f.write(line)
+    f.close()
+
 
 if __name__ == '__main__':
 
@@ -222,5 +237,9 @@ if __name__ == '__main__':
     stateAbbPath = dataPath + cf.STATE
     reviewPath = dataPath + cf.REVIEW
     dictPath = dataPath + cf.DICT
-    # loadReviews()
+
+    hobj = hunspell.HunSpell(cf.HUNSPELL_PATH + cf.HUNSPELL_DICT[0],
+                             cf.HUNSPELL_PATH + cf.HUNSPELL_DICT[1])
+    loadReviews()
     cleanReviewText()
+    createVocabulary()
