@@ -37,10 +37,6 @@ def loadReviews():
             review = json.loads(line)
             state, city = pp.checkBusinessLocation(review['business_id'], businessIds)
             if state is not None:
-                # print(list(review.values()))
-                # if state not in reviews.keys():
-                #     reviews[state] = []
-                # reviews[state].append(review.values())
                 filepath = directory + '/%s_reviews.csv' % state
                 mode = 'a'
                 if not os.path.exists(filepath):
@@ -50,11 +46,6 @@ def loadReviews():
                     if mode == 'w+':
                         writer.writerow(headers)
                     writer.writerow(review.values())
-    # json_data.close()
-    # for state, review in reviews.items():
-    #     filepath = directory + '/%s_reviews.csv' % state
-    #     review_df = pd.DataFrame(review, columns = headers)
-    #     review_df.to_csv(filepath)
 
 def cleanReviewText():
     """
