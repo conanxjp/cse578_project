@@ -74,6 +74,7 @@ def parseBusiness():
             categories.append(line[:-1])
     c.close()
 
+    yelp_cities = []
     # parse based on state
     with open(businessPath) as json_data:
         print('parsing business based on state names')
@@ -89,6 +90,8 @@ def parseBusiness():
             # address = business['address']
             # # filter out business that are not in the top 1000 cities or not a resturant
             if state in usStates and city in cities and checkCategory(category):
+                if [state, city] not in yelp_cities:
+                    yelp_cities.append([state, city])
                 checkResult, foundState = checkZipcode(zipcode, state)
                 if not checkResult and foundState != '':
                     # print(i, address, zipcode, city, state, foundState)
@@ -98,6 +101,11 @@ def parseBusiness():
                     states[state] = []
                 states[state].append(business)
     json_data.close()
+
+    with open(dataPath + 'filtered_cities.txt', 'w+') as f:
+        for pair in yelp_cities:
+            f.write('%s,%s\n' % (pair[0], pair[1]))
+    f.close()
 
     # parse based on city in a state and write to city.json files in state folder
     print('parsing business based on city names')

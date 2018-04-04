@@ -83,6 +83,9 @@ function cityStyle(feature) {
 var states;
 var cityContours;
 var MAX_CITIES = 300;
+var STATE_ZOOM_LEVEL = 8;
+var CITY_ZOOM_LEVEL = 10;
+var DIR_BUSINESS = '../assets/data/business/';
 var test;
 // define mouseover event handler
 function highlightFeature(e) {
@@ -133,46 +136,62 @@ function resetStateHighlight(e) {
 }
 // define mouse click zoom effect for state
 function zoomToStateFeature(e) {
-  map.fitBounds(e.target.getBounds(), {paddingTopLeft: [-300, -100], maxZoom: 10}); // padding to the right
-  // map.removeLayer(states);
-  // var polygon = e.target.feature.geometry.coordinates[0];
-  // for (var i = 0; i < polygon.length; i ++) {
-  //   polygon[i] = [polygon[i][1], polygon[i][0]];
-  // }
-  // test = polygon;
-  // // console.log(polygon);
-  // var stateContour = L.polygon(polygon, {
-  //   style: stateStyle
-  // }).addTo(map);
   var stateName = e.target.feature.properties.name;
   var center;
+  var foundCapital = false;
+  var rank = 1000;
   if (cityContours) {map.removeLayer(cityContours);}
   cityContours = L.geoJson(citiesData, {
     filter: function(feature) {
-      if (feature.properties.stateAbb === state2abb[stateName] && feature.properties.CAPITAL === 'Y')
-        center = [feature.properties.latitude, feature.properties.longitude];
+      if (feature.properties.stateAbb === state2abb[stateName]) {
+        if (!foundCapital) {
+          if (rank > feature.properties.rank) {
+            rank = feature.properties.rank;
+            center = [feature.properties.latitude, feature.properties.longitude];
+          }
+          if (feature.properties.CAPITAL === 'Y')
+            foundCapital = true;
+        }
+      }
       return feature.properties.stateAbb === state2abb[stateName] && feature.properties.rank <= MAX_CITIES;
     },
     style: cityStyle,
     onEachFeature: onEachCityFeature
   }).addTo(map);
+  map.setView(center, 8)
 }
 
 // define mouse click zoom effect for city
 function zoomToCityFeature(e) {
-  map.fitBounds(e.target.getBounds(), {paddingTopLeft: [-300, -100], maxZoom: 10}); // padding to the right
-  // console.log('city zoom');
-  // var state = e.target.feature.properties.name;
-  // var center;
-  // cityContours = L.geoJson(citiesData, {
-  //   filter: function(feature) {
-  //     if (feature.properties.stateAbb === state2abb[state] && feature.properties.CAPITAL === 'Y')
-  //       center = [feature.properties.latitude, feature.properties.longitude];
-  //     return feature.properties.stateAbb === state2abb[state] && feature.properties.rank <= MAX_CITIES;
-  //   },
-  //   style: cityStyle,
-  //   onEachFeature: onEachCityFeature
-  // }).addTo(map);
+  var cityInfo = e.target.feature.properties;
+  var center = [cityInfo.latitude, cityInfo.longitude];
+  var bounds = resizeBounds(e.target.getBounds(), 0.3)
+  map.fitBounds(bounds, {paddingTopLeft: [bounds.getCenter().lat - center[0], bounds.getCenter().lng - center[1]], maxZoom: 12}); // padding to the right
+  var state = cityInfo.stateAbb;
+  var city = cityInfo.city;
+  var businessJsonPath = DIR_BUSINESS + `${state}/${city}.json`;
+  var businessMarkers = [];
+  d3.json(businessJsonPath, function(error, data) {
+    console.log(state, city);
+    data.forEach(function(b, i) {
+      var businessMarker = L.marker([b.latitude, b.longitude]).bindPopup(b.name);
+      businessMarkers.push(businessMarker);
+    });
+  });
+  var business = L.layerGroup(businessMarkers);
+  var businessLayer = {'business': business};
+  L.control.layers(businessLayer).addTo(map);
+  // map.flyTo(center);
+}
+
+function resizeBounds(bounds, factor) {
+  lng_diff = bounds._northEast.lng - bounds._southWest.lng;
+  lat_diff = bounds._northEast.lat - bounds._southWest.lat;
+  bounds._southWest.lng += factor * lng_diff;
+  bounds._southWest.lat += factor * lat_diff;
+  bounds._northEast.lng -= factor * lng_diff;
+  bounds._northEast.lat -= factor * lat_diff;
+  return bounds;
 }
 
 function zoomOut(e) {
