@@ -8,6 +8,8 @@ stateData <- fromJSON("./map_data/us_cities.json")
 center <- fromJSON("./map_data/cities.json")
 polygon <- fromJSON("./map_data/cities.lfs.geojson")
 yelp_cities <- read.csv('./map_data/filtered_cities.txt', header = F)
+usStates <- fromJSON("./map_data/us-states.json")
+state2abb <- fromJSON("./map_data/state2abb.json")
 
 properties <- stateData$features$properties
 geometries <- stateData$features$geometry
