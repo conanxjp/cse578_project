@@ -5,9 +5,10 @@
 var accessToken = "pk.eyJ1IjoiY29uYW54anAiLCJhIjoiY2pkcWluNnVqMXl1eTMzcWhwOG9pczVibCJ9.rO146qntrsOvvqxTqFrabg";
 // initial map view position and zoom level
 var map = L.map('map', {
-  center: [37.8, -96],
-  zoom: 4,
-  minZoom: 4,
+  center: [40, -97],
+  zoomSnap: 0.1,
+  zoom: 4.6,
+  minZoom: 4.6,
   maxZoom: 18
   // zoomControl: false
 });
@@ -82,7 +83,6 @@ function cityStyle(feature) {
  ***************************************/
 var states;
 var cityContours;
-var MAX_CITIES = 300;
 var STATE_ZOOM_LEVEL = 8;
 var CITY_ZOOM_LEVEL = 10;
 var DIR_BUSINESS = '../assets/data/business/';
@@ -153,7 +153,7 @@ function zoomToStateFeature(e) {
             foundCapital = true;
         }
       }
-      return feature.properties.stateAbb === state2abb[stateName] && feature.properties.rank <= MAX_CITIES;
+      return feature.properties.stateAbb === state2abb[stateName];
     },
     style: cityStyle,
     onEachFeature: onEachCityFeature
