@@ -189,25 +189,29 @@ function addBusinessMarkers(state, city) {
 
   var businessJsonPath = DIR_BUSINESS + `${state}/${city}.json`;
   if (markers) {map.removeLayer(markers);}
-  markers = L.markerClusterGroup();
+  markers = L.markerClusterGroup({
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true
+  });
   var regions = [];
   d3.json(businessJsonPath, function(error, data) {
-    console.log(state, city);
-    var test = L.markerClusterGroup();
+    // var test = L.markerClusterGroup(disableClusteringAtZoom:6);
     data.forEach(function(b, i) {
-      if (i > 0 && i % 100 == 0) {
-        regions.push(test);
-        // markers.addLayer(test);
-        test = new L.markerClusterGroup();
-      }
-      marker = new L.marker([b.latitude, b.longitude]).bindPopup(b.name);
-      test.addLayer(marker);
-      // markers.addLayer(marker);
+      // if (i > 0 && i % 100 == 0) {
+      //   regions.push(test);
+      //   // markers.addLayer(test);
+      //   test = new L.markerClusterGroup();
+      // }
+      marker = L.marker(L.latLng(b.latitude, b.longitude)).bindPopup(b.name);
+      // regions.push(marker);
+      // test.addLayer(marker);
+      markers.addLayer(marker);
     });
   });
-  regions.forEach(function(r,i) {
-    makers.addLayer(r);
-  });
+  // regions.forEach(function(r,i) {
+  //   markers.addLayer(r);
+  // });
+  // markers.addLayers(regions);
   map.addLayer(markers);
 }
 
@@ -241,22 +245,6 @@ function onEachCityFeature(feature, layer) {
     dblclick: zoomOut
   });
 }
-// console.log(map);
-// selected.addTo(map);
-
-// console.log(test);
-// map.setView([42.65258, -73.75623], 10)
-// for (var i = 0; i < test.polygon.length; i ++) {
-//   test.polygon[i] = test.polygon[i].reverse();
-// }
-//
-// var polygon = L.polygon(test.polygon, {color: 'red'}).addTo(map);
-// cities = L.geoJson(citiesData, {
-//   filter: function(feature) {
-//     // console.log(feature, d);
-//     return feature.properties.STATEFP === stateFPs['AZ'];
-//   }
-// });
 
 // var cityCenters = [];
 // for (var i in cities._layers) {

@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="../assets/js/Leaflet.markercluster-1.3.0/dist/MarkerCluster.css">
     <link rel="stylesheet" href="../assets/js/Leaflet.markercluster-1.3.0/dist/MarkerCluster.Default.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <link rel="stylesheet" href="../assets/css/consumer.css">
     <!-- contains us state shapes in GeoJson format -->
     <script type="text/javascript" src="../assets/js/data/us-states.js"></script>
     <!-- contains us major cities (972 in total) in GeoJson format -->
@@ -17,9 +18,6 @@
     <!-- contains us state full name to abbreviations maps -->
     <script type="text/javascript" src="../assets/js/data/state2abb.js"></script>
     <script type="text/javascript" src="../assets/js/data/abb2state.js"></script>
-    <style>
-      #map { height: 400px; }
-    </style>
 
   </head>
   <body>
@@ -41,7 +39,23 @@
   	  </div>
   	</nav>
 
-    <div id="map"></div>
+    <div class="container-fluid">
+      <div id="main-container" class="container">
+        <div class="row">
+          <div class="col-sm">
+            <div id="map"></div>
+          </div>
+          <div class="col-sm">
+
+          </div>
+        </div>
+        <div class="row">
+
+        </div>
+      </div>
+
+    </div>
+
 
     <script type="text/javascript" src="../assets/js/consumer_app.js"></script>
 
