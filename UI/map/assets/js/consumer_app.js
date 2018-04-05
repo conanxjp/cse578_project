@@ -83,6 +83,7 @@ function cityStyle(feature) {
  ***************************************/
 var states;
 var cityContours;
+var markers;
 var STATE_ZOOM_LEVEL = 8;
 var CITY_ZOOM_LEVEL = 10;
 var DIR_BUSINESS = '../assets/data/business/';
@@ -124,7 +125,7 @@ function highlightStateFeature(e) {
 // define mouse our event handler
 function resetHighlight(e) {
   // reset style to default defined in style config
-  console.log(e);
+  // console.log(e);
   states.resetStyle(e.target);
 }
 
@@ -169,21 +170,11 @@ function zoomToCityFeature(e) {
   map.fitBounds(bounds, {paddingTopLeft: [bounds.getCenter().lat - center[0], bounds.getCenter().lng - center[1]], maxZoom: 12}); // padding to the right
   var state = cityInfo.stateAbb;
   var city = cityInfo.city;
-  var businessJsonPath = DIR_BUSINESS + `${state}/${city}.json`;
-  var businessMarkers = [];
-  d3.json(businessJsonPath, function(error, data) {
-    console.log(state, city);
-    data.forEach(function(b, i) {
-      var businessMarker = L.marker([b.latitude, b.longitude]).bindPopup(b.name);
-      businessMarkers.push(businessMarker);
-    });
-  });
-  var business = L.layerGroup(businessMarkers);
-  var businessLayer = {'business': business};
-  L.control.layers(businessLayer).addTo(map);
-  // map.flyTo(center);
+  addBusinessMarkers(state, city);
 }
 
+// redefine the bounds when city is selected to achieve desirable level of zoom
+// factor defines how much to shrink the original bounds, takes value between 0 ~ 1
 function resizeBounds(bounds, factor) {
   lng_diff = bounds._northEast.lng - bounds._southWest.lng;
   lat_diff = bounds._northEast.lat - bounds._southWest.lat;
@@ -192,6 +183,32 @@ function resizeBounds(bounds, factor) {
   bounds._northEast.lng -= factor * lng_diff;
   bounds._northEast.lat -= factor * lat_diff;
   return bounds;
+}
+
+function addBusinessMarkers(state, city) {
+
+  var businessJsonPath = DIR_BUSINESS + `${state}/${city}.json`;
+  if (markers) {map.removeLayer(markers);}
+  markers = L.markerClusterGroup();
+  var regions = [];
+  d3.json(businessJsonPath, function(error, data) {
+    console.log(state, city);
+    var test = L.markerClusterGroup();
+    data.forEach(function(b, i) {
+      if (i > 0 && i % 100 == 0) {
+        regions.push(test);
+        // markers.addLayer(test);
+        test = new L.markerClusterGroup();
+      }
+      marker = new L.marker([b.latitude, b.longitude]).bindPopup(b.name);
+      test.addLayer(marker);
+      // markers.addLayer(marker);
+    });
+  });
+  regions.forEach(function(r,i) {
+    makers.addLayer(r);
+  });
+  map.addLayer(markers);
 }
 
 function zoomOut(e) {
