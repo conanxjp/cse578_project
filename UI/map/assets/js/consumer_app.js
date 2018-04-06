@@ -85,6 +85,9 @@ var states;
 var cityContours;
 var markers;
 var business;
+// temporary category list for testing
+var categories = ['American (New)', 'American (Traditional)', 'Bakeries', 'Bars'];
+var categoryList = d3.select('#category_list');
 var stateList = d3.select('#state_list');
 var cityList = d3.select('#city_list');
 var restList = d3.select('#rest_list');
@@ -167,6 +170,12 @@ function zoomToStateFeature(e) {
     style: cityStyle,
     onEachFeature: onEachCityFeature
   }).addTo(map);
+  addCityList(cities);
+
+  map.setView(center, 8)
+}
+
+function addCityList(cities) {
   cityList.selectAll('option')
             .data(cities)
             .enter()
@@ -176,7 +185,6 @@ function zoomToStateFeature(e) {
   cityList.append('option')
             .attr('disabled', '').attr('selected', '').attr('value', '').text('-- select a city --');
   cityList.on('change', function() {zoomToCity()});
-  map.setView(center, 8)
 }
 
 // define mouse click zoom effect for city
@@ -188,7 +196,7 @@ function zoomToCityFeature(e) {
   var state = cityInfo.stateAbb;
   var city = cityInfo.city;
   $('#city_list').val(city);
-  addBusinessMarkers(state, city);
+  loadBusiness(state, city);
 }
 
 function zoomToCity() {
@@ -200,7 +208,7 @@ function zoomToCity() {
   var center = [cityInfo.latitude, cityInfo.longitude];
   var state = cityInfo.stateAbb;
   map.setView(center, 12);
-  addBusinessMarkers(state, city);
+  loadBusiness(state, city);
 }
 
 // redefine the bounds when city is selected to achieve desirable level of zoom
@@ -215,37 +223,43 @@ function resizeBounds(bounds, factor) {
   return bounds;
 }
 
-function addBusinessMarkers(state, city) {
+function loadBusiness(state, city) {
   var businessJsonPath = DIR_BUSINESS + `${state}/${city}.json`;
+  d3.json(businessJsonPath, function(error, data) {
+    business = rankBusiness('name', data);
+    addBusinessMarkers();
+    addCategoryList();
+  });
+}
+
+function addBusinessMarkers() {
   if (markers) {map.removeLayer(markers);}
   markers = L.markerClusterGroup({
     chunkedLoading: true,
     showCoverageOnHover: false,
     zoomToBoundsOnClick: true
   });
-  // var regions = [];
-  d3.json(businessJsonPath, function(error, data) {
-    business = data;
-    rankBusiness('name');
-    addBusinessList();
-    business.forEach(function(b, i) {
-      marker = L.marker(L.latLng(b.latitude, b.longitude), {title: b.name});
-      marker.bindPopup(b.name);
-      // regions.push(marker);
-      markers.addLayer(marker);
-    });
+  var regions = [];
+  addBusinessList(business);
+  business.forEach(function(b, i) {
+    marker = L.marker(L.latLng(b.latitude, b.longitude), {title: b.name});
+    marker.bindPopup(b.name);
+    regions.push(marker);
+    // markers.addLayer(marker);
   });
-  // markers.addLayers(regions);
+  markers.addLayers(regions);
   map.addLayer(markers);
+  map.fitBounds(markers.getBounds());
 }
 
-function rankBusiness(key) {
-  business = business.sort((a, b) => d3.ascending(a.name, b.name));
+function rankBusiness(key, data) {
+  return data.sort((a, b) => d3.ascending(a.name, b.name));
 }
 
-function addBusinessList() {
+function addBusinessList(businessList) {
+  restList.selectAll('option').remove();
   restList.selectAll('option')
-            .data(business).enter()
+            .data(businessList).enter()
             .append('option')
             .attr('value', function(b) {return b.business_id;})
             .text(function(b) {return b.name;});
@@ -256,7 +270,6 @@ function selectRest() {
   var businessId = $('#rest_list').val();
   var selectedBusiness = business.find(function(b) {return b.business_id == businessId;});
   hightlightMarker(selectedBusiness.name);
-  
 }
 
 function hightlightMarker(name) {
@@ -319,16 +332,66 @@ function zoomToState(state) {
     style: cityStyle,
     onEachFeature: onEachCityFeature
   }).addTo(map);
-  cityList.selectAll('option')
-            .data(cities)
-            .enter()
-            .append('option')
-            .attr('value', function(c) {return c;})
-            .text(function(c) {return c;});
-  cityList.append('option')
-            .attr('disabled', '').attr('selected', '').attr('value', '').text('-- select a city --');
-  cityList.on('change', function() {zoomToCity()});
+  addCityList(cities);
   map.setView(center, 8)
+}
+
+function addCategoryList() {
+  categoryList.selectAll('option').remove();
+  categoryList.selectAll('option')
+                .data(categories).enter()
+                .append('option')
+                .attr('value', function(c) {return c;})
+                .text(function(c) {return c;});
+  categoryList.append('option')
+                .attr('selected', '')
+                .attr('value', 'all')
+                .text('All');
+  categoryList.on('change', filterCategory);
+}
+
+function filterCategory() {
+  var category = $('#category_list').val();
+  var filteredBusiness = business.filter(function(b) {
+    return b.categories.constructor === Array ? b.categories.includes(category) : b.categories === category;
+  });
+  addFilteredBusinessMarkers(filteredBusiness);
+}
+
+function addFilteredBusinessMarkers(filteredBusiness) {
+  addBusinessList(filteredBusiness);
+  if (markers) {map.removeLayer(markers);}
+  markers = L.markerClusterGroup({
+    chunkedLoading: true,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true
+  });
+  var regions = [];
+  filteredBusiness.forEach(function(b) {
+    var marker = L.marker(L.latLng(b.latitude, b.longitude), {title: b.name});
+    marker.bindPopup(b.name);
+    regions.push(marker);
+    // markers.addLayer(marker);
+  });
+  markers.addLayers(regions);
+  map.addLayer(markers);
+  map.fitBounds(markers.getBounds());
+}
+
+function addFilterSliders() {
+  var aspects = ['Food','Ambience','Price','Service'];
+  var controls = d3.select('#filter_controls');
+  controls.selectAll('input')
+          .data(aspects).enter()
+          .append('label').attr('class', 'slider_label').text(function(a) {return a;})
+          .append('input')
+          .attr('type', 'range')
+          .attr('min', -5)
+          .attr('max', 5)
+          .attr('step', 1)
+          .attr('value', 0)
+          .attr('id', function(a) {return a})
+          .attr('class', 'slider');
 }
 
 // initialized funciton
@@ -342,6 +405,7 @@ function init() {
   stateList.append('option')
             .attr('disabled', '').attr('selected', '').attr('value', '').text('-- select a state --');
   stateList.on('change', function() {zoomToState($('#state_list').val());})
+  addFilterSliders();
 }
 
 // add style and event listeners to each layer in GeoJson
