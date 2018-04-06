@@ -25,7 +25,7 @@
 
   </head>
   <body>
-
+    <!-- navigation bar -->
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
   	  <a class="navbar-brand" href="../index.html">Smart Yelp</a>
   	  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -42,42 +42,46 @@
   	    </ul>
   	  </div>
   	</nav>
-
+    <!-- main body -->
     <div class="container-fluid">
+      <!-- main content -->
       <div id="main-container" class="container">
+        <!-- main row: map on left, control and info are on right -->
         <div class="row">
+          <!-- map -->
           <div class="col-sm">
             <div id="map"></div>
           </div>
+          <!-- control and info -->
           <div class="col-sm">
+            <!-- control container -->
             <div id="control_container" class="container">
+              <!-- row: control and info -->
               <div class="row">
+                <!-- state, city and restaurant list -->
                 <div class="col-sm-7">
+                  <!-- row: state and city lists -->
                   <div class="row">
                     <div class="col-sm">
-                      <select id="state_list" class="" name="state">
-                      </select>
+                      <select id="state_list" class="" name="state"></select>
                     </div>
                     <div class="col-sm">
-                      <select id="city_list" class="" name="city">
-
-                      </select>
+                      <select id="city_list" class="" name="city"></select>
                     </div>
                   </div>
+                  <!-- row: restaurant list  -->
                   <div id="select_rest" class="row">
-                    <select id="rest_list" class="" size = 10>
-                    </select>
-
+                    <select id="rest_list" class="" size = 10></select>
                   </div>
                 </div>
+                <!-- filter controls -->
                 <div class="col-sm-5">
                   <div id="category" class="row">
-                    <select id="category_list" class="" name="">
-
-                    </select>
+                    <!-- category list -->
+                    <select id="category_list" class="" name=""></select>
                   </div>
-                  <div id="filter_controls" class="row">
-                  </div>
+                  <!-- aspect filters -->
+                  <div id="filter_controls" class="row"></div>
                 </div>
               </div>
             </div>
