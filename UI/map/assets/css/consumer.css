@@ -9,6 +9,14 @@
   padding-bottom: 15px;
 }
 
+#rest_list {
+  padding-top: 20px;
+}
+
+#select_rest {
+  width: 90%;
+}
+
 .container {
   max-width: 95%;
 }

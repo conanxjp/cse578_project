@@ -15,7 +15,7 @@ var map = L.map('map', {
 // map.fitWorld();
 // set configurations of leaflet tile map layer using mapbox
 L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=' + accessToken, {
-    // attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
+    attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="http://mapbox.com">Mapbox</a>',
     maxZoom: 18,
     id: 'mapbox.streets'
 }).addTo(map);
@@ -245,6 +245,9 @@ function onEachCityFeature(feature, layer) {
     dblclick: zoomOut
   });
 }
+
+// $('#rest_list').on('change', function() {console.log($('#rest_list').val());})
+d3.select('#rest_list').on('change', function() {console.log($('#rest_list').val());})
 
 // var cityCenters = [];
 // for (var i in cities._layers) {
