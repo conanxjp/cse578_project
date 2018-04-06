@@ -103,7 +103,7 @@ def parseBusiness():
     json_data.close()
 
     with open(dataPath + 'filtered_cities.txt', 'w+') as f:
-        for pair in yelp_cities:
+        for pair in yelp_citiesi:
             f.write('%s,%s\n' % (pair[0], pair[1]))
     f.close()
 

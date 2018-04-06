@@ -84,6 +84,8 @@ function cityStyle(feature) {
 var states;
 var cityContours;
 var markers;
+var stateList = d3.select('#state_list');
+var cityList = d3.select('#city_list');
 var STATE_ZOOM_LEVEL = 8;
 var CITY_ZOOM_LEVEL = 10;
 var DIR_BUSINESS = '../assets/data/business/';
@@ -137,14 +139,18 @@ function resetStateHighlight(e) {
 }
 // define mouse click zoom effect for state
 function zoomToStateFeature(e) {
+  cityList.selectAll('option').remove();
   var stateName = e.target.feature.properties.name;
   var center;
   var foundCapital = false;
   var rank = 1000;
+  $('#state_list').val(state2abb[stateName]);
+  var cities = [];
   if (cityContours) {map.removeLayer(cityContours);}
   cityContours = L.geoJson(citiesData, {
     filter: function(feature) {
       if (feature.properties.stateAbb === state2abb[stateName]) {
+        cities.push(feature.properties.city);
         if (!foundCapital) {
           if (rank > feature.properties.rank) {
             rank = feature.properties.rank;
@@ -159,6 +165,13 @@ function zoomToStateFeature(e) {
     style: cityStyle,
     onEachFeature: onEachCityFeature
   }).addTo(map);
+  cityList.selectAll('option')
+            .data(cities)
+            .enter()
+            .append('option')
+            .attr('value', function(c) {return c;})
+            .text(function(c) {return c;});
+  cityList.on('change', function() {zoomToCity($('city_list').val())});
   map.setView(center, 8)
 }
 
@@ -170,6 +183,17 @@ function zoomToCityFeature(e) {
   map.fitBounds(bounds, {paddingTopLeft: [bounds.getCenter().lat - center[0], bounds.getCenter().lng - center[1]], maxZoom: 12}); // padding to the right
   var state = cityInfo.stateAbb;
   var city = cityInfo.city;
+  addBusinessMarkers(state, city);
+}
+
+function zoomToCity(city) {
+  var cityInfo;
+  citiesData.features.forEach(function(c) {
+    if (c.properties.city == city) cityInfo = c.properties;
+  });
+  var center = [cityInfo.latitude, cityInfo.longitude];
+  var state = cityInfo.stateAbb;
+  map.setView(center, 12);
   addBusinessMarkers(state, city);
 }
 
@@ -186,7 +210,6 @@ function resizeBounds(bounds, factor) {
 }
 
 function addBusinessMarkers(state, city) {
-
   var businessJsonPath = DIR_BUSINESS + `${state}/${city}.json`;
   if (markers) {map.removeLayer(markers);}
   markers = L.markerClusterGroup({
@@ -229,12 +252,6 @@ function onEachStateFeature(feature, layer) {
     dblclick: zoomOut
   });
 }
-// add style and event listeners to each layer in GeoJson
-states = L.geoJson(statesData, {
-  style: stateStyle,
-  onEachFeature: onEachStateFeature
-}).addTo(map);  // add the configured GeoJson layer to map
-
 
 // add event listeners to city layer
 function onEachCityFeature(feature, layer) {
@@ -246,7 +263,62 @@ function onEachCityFeature(feature, layer) {
   });
 }
 
-// $('#rest_list').on('change', function() {console.log($('#rest_list').val());})
+function zoomToState(state) {
+  cityList.selectAll('option').remove();
+  var center;
+  var foundCapital = false;
+  var rank = 1000;
+  // stateList.append('option').text(stateName);
+  var cities = [];
+  if (cityContours) {map.removeLayer(cityContours);}
+  cityContours = L.geoJson(citiesData, {
+    filter: function(feature) {
+      if (feature.properties.stateAbb === state) {
+        cities.push(feature.properties.city);
+        if (!foundCapital) {
+          if (rank > feature.properties.rank) {
+            rank = feature.properties.rank;
+            center = [feature.properties.latitude, feature.properties.longitude];
+          }
+          if (feature.properties.CAPITAL === 'Y')
+            foundCapital = true;
+        }
+      }
+      return feature.properties.stateAbb === state;
+    },
+    style: cityStyle,
+    onEachFeature: onEachCityFeature
+  }).addTo(map);
+  cityList.selectAll('option')
+            .data(cities)
+            .enter()
+            .append('option')
+            .attr('value', function(c) {return c;})
+            .text(function(c) {return c;});
+  cityList.on('change', function() {zoomToCity($('#city_list').val())});
+  map.setView(center, 8)
+}
+
+// initialized funciton
+function init() {
+  stateList.selectAll('option')
+            .data(statesData.features).enter()
+            .append('option')
+            .attr('value', function(s) {return state2abb[s.properties.name];})
+            .text(function(s) {return s.properties.name;});
+            // .on('change', function() {console.log(+this.value);});
+  stateList.append('option')
+            .attr('disabled', '').attr('selected', '').attr('value', '').text('-- select a state --');
+  stateList.on('change', function() {zoomToState($('#state_list').val());})
+}
+
+// add style and event listeners to each layer in GeoJson
+states = L.geoJson(statesData, {
+  style: stateStyle,
+  onEachFeature: onEachStateFeature
+}).addTo(map);  // add the configured GeoJson layer to map
+
+init();
 d3.select('#rest_list').on('change', function() {console.log($('#rest_list').val());})
 
 // var cityCenters = [];
