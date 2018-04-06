@@ -84,8 +84,10 @@ function cityStyle(feature) {
 var states;
 var cityContours;
 var markers;
+var business;
 var stateList = d3.select('#state_list');
 var cityList = d3.select('#city_list');
+var restList = d3.select('#rest_list');
 var STATE_ZOOM_LEVEL = 8;
 var CITY_ZOOM_LEVEL = 10;
 var DIR_BUSINESS = '../assets/data/business/';
@@ -171,7 +173,9 @@ function zoomToStateFeature(e) {
             .append('option')
             .attr('value', function(c) {return c;})
             .text(function(c) {return c;});
-  cityList.on('change', function() {zoomToCity($('city_list').val())});
+  cityList.append('option')
+            .attr('disabled', '').attr('selected', '').attr('value', '').text('-- select a city --');
+  cityList.on('change', function() {zoomToCity()});
   map.setView(center, 8)
 }
 
@@ -183,10 +187,12 @@ function zoomToCityFeature(e) {
   map.fitBounds(bounds, {paddingTopLeft: [bounds.getCenter().lat - center[0], bounds.getCenter().lng - center[1]], maxZoom: 12}); // padding to the right
   var state = cityInfo.stateAbb;
   var city = cityInfo.city;
+  $('#city_list').val(city);
   addBusinessMarkers(state, city);
 }
 
-function zoomToCity(city) {
+function zoomToCity() {
+  city = $('#city_list').val()
   var cityInfo;
   citiesData.features.forEach(function(c) {
     if (c.properties.city == city) cityInfo = c.properties;
@@ -213,29 +219,53 @@ function addBusinessMarkers(state, city) {
   var businessJsonPath = DIR_BUSINESS + `${state}/${city}.json`;
   if (markers) {map.removeLayer(markers);}
   markers = L.markerClusterGroup({
+    chunkedLoading: true,
     showCoverageOnHover: false,
     zoomToBoundsOnClick: true
   });
-  var regions = [];
+  // var regions = [];
   d3.json(businessJsonPath, function(error, data) {
-    // var test = L.markerClusterGroup(disableClusteringAtZoom:6);
-    data.forEach(function(b, i) {
-      // if (i > 0 && i % 100 == 0) {
-      //   regions.push(test);
-      //   // markers.addLayer(test);
-      //   test = new L.markerClusterGroup();
-      // }
-      marker = L.marker(L.latLng(b.latitude, b.longitude)).bindPopup(b.name);
+    business = data;
+    rankBusiness('name');
+    addBusinessList();
+    business.forEach(function(b, i) {
+      marker = L.marker(L.latLng(b.latitude, b.longitude), {title: b.name});
+      marker.bindPopup(b.name);
       // regions.push(marker);
-      // test.addLayer(marker);
       markers.addLayer(marker);
     });
   });
-  // regions.forEach(function(r,i) {
-  //   markers.addLayer(r);
-  // });
   // markers.addLayers(regions);
   map.addLayer(markers);
+}
+
+function rankBusiness(key) {
+  business = business.sort((a, b) => d3.ascending(a.name, b.name));
+}
+
+function addBusinessList() {
+  restList.selectAll('option')
+            .data(business).enter()
+            .append('option')
+            .attr('value', function(b) {return b.business_id;})
+            .text(function(b) {return b.name;});
+  restList.on('change', selectRest);
+}
+
+function selectRest() {
+  var businessId = $('#rest_list').val();
+  var selectedBusiness = business.find(function(b) {return b.business_id == businessId;});
+  hightlightMarker(selectedBusiness.name);
+  
+}
+
+function hightlightMarker(name) {
+  markers.eachLayer(function(m) {
+    if (name === m.options.title) {
+      markers.zoomToShowLayer(m, function() {m.openPopup();});
+      return;
+    }
+  });
 }
 
 function zoomOut(e) {
@@ -295,7 +325,9 @@ function zoomToState(state) {
             .append('option')
             .attr('value', function(c) {return c;})
             .text(function(c) {return c;});
-  cityList.on('change', function() {zoomToCity($('#city_list').val())});
+  cityList.append('option')
+            .attr('disabled', '').attr('selected', '').attr('value', '').text('-- select a city --');
+  cityList.on('change', function() {zoomToCity()});
   map.setView(center, 8)
 }
 
@@ -319,7 +351,6 @@ states = L.geoJson(statesData, {
 }).addTo(map);  // add the configured GeoJson layer to map
 
 init();
-d3.select('#rest_list').on('change', function() {console.log($('#rest_list').val());})
 
 // var cityCenters = [];
 // for (var i in cities._layers) {
