@@ -85,6 +85,7 @@ var states;
 var cityContours;
 var markers;
 var business;
+var checkins;
 // temporary category list for testing
 var categories = ['American (New)', 'American (Traditional)', 'Bakeries', 'Bars'];
 var categoryList = d3.select('#category_list');
@@ -94,6 +95,7 @@ var restList = d3.select('#rest_list');
 var STATE_ZOOM_LEVEL = 8;
 var CITY_ZOOM_LEVEL = 10;
 var DIR_BUSINESS = '../assets/data/business/';
+var DIR_CHECKIN = '../assets/data/checkin/';
 var test;
 // define mouseover event handler
 function highlightFeature(e) {
@@ -230,6 +232,7 @@ function loadBusiness(state, city) {
     addBusinessMarkers();
     addCategoryList();
   });
+  loadCheckin(state, city);
 }
 
 function addBusinessMarkers() {
@@ -242,10 +245,10 @@ function addBusinessMarkers() {
   var regions = [];
   addBusinessList(business);
   business.forEach(function(b, i) {
-    marker = L.marker(L.latLng(b.latitude, b.longitude), {title: b.name});
+    marker = L.marker(L.latLng(b.latitude, b.longitude), {title: b.name, id: b.business_id});
     marker.bindPopup(b.name);
+    marker.on('click', function() {highlightSelection(b.business_id);});
     regions.push(marker);
-    // markers.addLayer(marker);
   });
   markers.addLayers(regions);
   map.addLayer(markers);
@@ -269,16 +272,49 @@ function addBusinessList(businessList) {
 function selectRest() {
   var businessId = $('#rest_list').val();
   var selectedBusiness = business.find(function(b) {return b.business_id == businessId;});
-  hightlightMarker(selectedBusiness.name);
+  highlightMarker(businessId);
+  showCheckin(businessId);
 }
 
-function hightlightMarker(name) {
+function highlightMarker(bid) {
   markers.eachLayer(function(m) {
-    if (name === m.options.title) {
+    if (bid === m.options.id) {
       markers.zoomToShowLayer(m, function() {m.openPopup();});
+      map.setView([m._latlng.lat, m._latlng.lng], 18);
       return;
     }
   });
+}
+
+function loadCheckin(state, city) {
+  var checkinJsonPath = DIR_CHECKIN + `${state}/${city}/${city}_checkin.json`;
+  d3.json(checkinJsonPath, function(error, data) {
+    checkins = data;
+  });
+}
+
+function showCheckin(businessId) {
+  d3.select('#checkin svg').remove();
+  var checkinSvg = d3.select('#checkin').append('svg');
+  var day = 'Monday';
+  var hoursInt = d3.range(24);
+  var hours = {};
+  hoursInt.forEach(function(h) {hours[`${h}:00`] = 0;});
+  if (checkins[businessId]) {
+    var checkin = checkins[businessId][day]
+    if (checkin) {
+      for (var hour in checkin) {
+        hours[hour] = checkin[hour];
+      }
+    }
+    else {
+
+    }
+  }
+  else {
+    // console.log(businessId);
+  }
+  console.log(hours);
 }
 
 function zoomOut(e) {
@@ -368,14 +404,22 @@ function addFilteredBusinessMarkers(filteredBusiness) {
   });
   var regions = [];
   filteredBusiness.forEach(function(b) {
-    var marker = L.marker(L.latLng(b.latitude, b.longitude), {title: b.name});
+    var marker = L.marker(L.latLng(b.latitude, b.longitude), {title: b.name, id: b.business_id});
     marker.bindPopup(b.name);
+    //TODO add click event handler
+    marker.on('click', function() {highlightSelection(b.business_id);});
     regions.push(marker);
     // markers.addLayer(marker);
   });
   markers.addLayers(regions);
   map.addLayer(markers);
   map.fitBounds(markers.getBounds());
+}
+
+function highlightSelection(bid) {
+  var selected = restList.selectAll('option')
+            .filter(function(o) {return o.business_id === bid})
+            .attr('selected', '');
 }
 
 function addFilterSliders() {

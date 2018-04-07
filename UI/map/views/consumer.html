@@ -49,13 +49,13 @@
         <!-- main row: map on left, control and info are on right -->
         <div class="row">
           <!-- map -->
-          <div class="col-sm">
+          <div class="col-sm-5">
             <div id="map"></div>
           </div>
           <!-- control and info -->
-          <div class="col-sm">
-            <!-- control container -->
-            <div id="control_container" class="container">
+          <div class="col-sm-7">
+            <!-- control and info container -->
+            <div id="control_info_container" class="container">
               <!-- row: control and info -->
               <div class="row">
                 <!-- state, city and restaurant list -->
@@ -82,6 +82,21 @@
                   </div>
                   <!-- aspect filters -->
                   <div id="filter_controls" class="row"></div>
+                </div>
+              </div>
+              <!-- row: info -->
+              <div class="row">
+                <!-- checkin info -->
+                <div id="checkin" class="col-sm-4 info-col"></div>
+                <!-- review info -->
+                <div class="col-sm-8">
+                  <!-- star rating -->
+                  <div id="review_star" class="row"></div>
+                  <!-- row: text cloud -->
+                  <div class="row">
+                    <div id="good_text_cloud" class="col-sm-6 info-col"></div>
+                    <div id="bad_text_cloud" class="col-sm-6 info-col"></div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -9,6 +9,11 @@
   padding-bottom: 15px;
 }
 
+#control_info_container {
+  max-width: 100%;
+  padding: 0 0;
+}
+
 #select_rest {
   padding-top: 20px;
 }
@@ -24,6 +29,11 @@
 .container {
   max-width: 95%;
 }
+
+.info-col {
+  padding: 5px 5px;
+}
+
 .col-sm {
   padding-left: 5px;
   padding-right: 5px;
