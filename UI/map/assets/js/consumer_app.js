@@ -94,9 +94,10 @@ var cityList = d3.select('#city_list');
 var restList = d3.select('#rest_list');
 var STATE_ZOOM_LEVEL = 8;
 var CITY_ZOOM_LEVEL = 10;
-var DIR_BUSINESS = '../assets/data/business/';
-var DIR_CHECKIN = '../assets/data/checkin/';
-var checkinWidth = d3.select('#checkin').node().getBoundingClientRect().width;
+var DIR_BUSINESS = '../assets/data/business_consumer/';
+var DIR_CHECKIN = '../assets/data/checkin_consumer/';
+var checkinWidth = 200//d3.select('#checkin').node().getBoundingClientRect().width;
+var checkinHeight = 80; //d3.select('#checkin').node().getBoundingClientRect().height;
 // var checkinHourScale = d3.time.scale().domain(function(d3.range()))
 // var checkinHourScale = d3.scaleLinear().domain([0, 24]).range([0, checkinWidth * 0.9]);
 // var checkinHourAxis = d3.axisBottom(checkinHourScale);
@@ -301,31 +302,71 @@ function loadCheckin(state, city) {
 
 function showCheckin(businessId) {
   d3.select('#checkin svg').remove();
-  var checkinSvg = d3.select('#checkin').append('svg');
+  var checkinSvg = d3.select('#checkin').append('svg').attr('width', 220);
   var day = 'Monday';
   var hoursInt = d3.range(24);
-  var hours = {};
+  var hours = [];
   hoursInt.forEach(function(h) {hours[`${h}:00`] = 0;});
-  var checkinHourScale = d3.scaleTime().domain(d3.extent(hours, function(h) {return h;})).range([0, checkinWidth * 0.9]);
-  console.log(checkinHourScale);
+  var checkinHourScale = d3.scaleLinear().domain([0, 23]).range([0, checkinWidth * 0.9]);
+
   var checkinHourAxis = d3.axisBottom(checkinHourScale);
+  checkinHourAxis.tickValues(d3.range(24));
   if (checkins[businessId]) {
     var checkin = checkins[businessId][day]
     if (checkin) {
+      max = 5
       for (var hour in checkin) {
+        if (checkin[hour] > max) max = checkin[hour];
         hours[hour] = checkin[hour];
       }
+      hour = []
+      for (var key in hours) {
+        hour.push(hours[key]);
+      }
+      var checkinCountScale = d3.scaleLinear().domain([max, 0]).range([0, checkinHeight * 0.8]);
+      var checkinCountAxis = d3.axisLeft(checkinHourScale);
+      // checkinCountAxis.tickValues(d3.range(max));
+      var checkinYAxis = checkinSvg.append('g')
+                                  .attr('id', 'checkin_y_axis')
+                                  .attr('transform', 'translate(5, 0)')
+                                  .transition()
+                                  .duration(500)
+                                  .call(checkinCountAxis);;
+      var checkinXAxis = checkinSvg.append('g')
+                                  .attr('id', 'checkin_x_axis')
+                                  .attr('transform', 'translate(5, 120)')
+                                  .transition()
+                                  .duration(500)
+                                  .call(checkinHourAxis);;
 
-      checkinSvg.call(checkinHourAxis);
+      checkinSvg.append('text')
+                  .attr('id', 'checkin_x_axis_label')
+                  .attr('transform', 'translate(100, 150)')
+                  .style('text-anchor', 'middle')
+                  .attr('font-size', '0.5em')
+                  .text('Hour');
+      console.log(hour);
+      var bandwidth = checkinWidth * 0.9 / 24;
+      var checkinBars = checkinSvg.append('g')
+                              .attr('id', 'checkin_bars')
+                              .attr('transform', 'translate(5, 55)');
+      checkinBars.selectAll('rect')
+                  .data(hour).enter()
+                  .append('rect')
+                  .attr('x', function(d, i) {return checkinHourScale(i);})
+                  .attr('height', function(d) {return checkinHeight * 0.8 - checkinCountScale(d);})
+                  .attr('width', bandwidth)
+                  .transition()
+                  .duration(500)
+                  .attr('y', function(d) {return checkinCountScale(d);});
     }
     else {
-
+      // TODO closed picture
     }
   }
   else {
     // console.log(businessId);
   }
-  console.log(hours);
 }
 
 function zoomOut(e) {
