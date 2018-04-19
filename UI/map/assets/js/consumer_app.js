@@ -96,6 +96,12 @@ var STATE_ZOOM_LEVEL = 8;
 var CITY_ZOOM_LEVEL = 10;
 var DIR_BUSINESS = '../assets/data/business/';
 var DIR_CHECKIN = '../assets/data/checkin/';
+var checkinWidth = d3.select('#checkin').node().getBoundingClientRect().width;
+// var checkinHourScale = d3.time.scale().domain(function(d3.range()))
+// var checkinHourScale = d3.scaleLinear().domain([0, 24]).range([0, checkinWidth * 0.9]);
+// var checkinHourAxis = d3.axisBottom(checkinHourScale);
+// checkinHourAxis.ticks(24);
+// checkinHourAxis.tickValues(d3.range(3).map(i => i * 6 + 6));
 var test;
 // define mouseover event handler
 function highlightFeature(e) {
@@ -300,12 +306,17 @@ function showCheckin(businessId) {
   var hoursInt = d3.range(24);
   var hours = {};
   hoursInt.forEach(function(h) {hours[`${h}:00`] = 0;});
+  var checkinHourScale = d3.scaleTime().domain(d3.extent(hours, function(h) {return h;})).range([0, checkinWidth * 0.9]);
+  console.log(checkinHourScale);
+  var checkinHourAxis = d3.axisBottom(checkinHourScale);
   if (checkins[businessId]) {
     var checkin = checkins[businessId][day]
     if (checkin) {
       for (var hour in checkin) {
         hours[hour] = checkin[hour];
       }
+
+      checkinSvg.call(checkinHourAxis);
     }
     else {
 

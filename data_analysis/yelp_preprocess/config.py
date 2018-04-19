@@ -20,7 +20,7 @@ CHECKIN   = "checkin.json"
 STATE     = "state2abb.json"
 CITY      = "us-cities.json"
 ZIP_CODE  = "zip-code.xml"
-CATEGORY  = "categories.txt"
+CATEGORY  = "categories_new.txt"
 # paths for prepareReviews
 DICT      = "glove.42B.300d.txt"
 # path for hunspell configurations

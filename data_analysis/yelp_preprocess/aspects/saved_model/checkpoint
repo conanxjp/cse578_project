@@ -1,0 +1,6 @@
+model_checkpoint_path: "aspect-200"
+all_model_checkpoint_paths: "aspect-196"
+all_model_checkpoint_paths: "aspect-197"
+all_model_checkpoint_paths: "aspect-198"
+all_model_checkpoint_paths: "aspect-199"
+all_model_checkpoint_paths: "aspect-200"

@@ -8,6 +8,7 @@ import types
 import argparse
 import sys
 import csv
+import operator
 
 
 def parseBusiness():
@@ -40,14 +41,33 @@ def parseBusiness():
             return False
         else:
             if isinstance(category, list):
-                intersection = [c for c in category if c in categories]
+                intersection = [c for c in category if c in categories or c in categoryDict.keys()]
                 if len(intersection) != 0:
                     return True
             else:
-                if category in categories:
+                if category in categories or categoryDict[category] in categories:
                     return True
         return False
 
+    categoryDict = {
+        'Chicken Wings': 'American (New)',
+        'Steakhouses': 'American (New)',
+        'Cupcakes': 'Bakeries',
+        'Donuts': 'Bakeries',
+        'Bagels': 'Bakeries',
+        'Donuts': 'Breakfast',
+        'Bagels': 'Breakfast',
+        'Juice Bars & Smoothies': 'Beverage',
+        'Wine Bars': 'Bars',
+        'Cocktail Bars': 'Bars',
+        'Beer Bars': 'Bars',
+        'Sandwiches': 'Fast Food',
+        'Burgers': 'Fast Food',
+        'Salad': 'Fast Food',
+        'Vegan': 'Vegetarian',
+        'Sushi Bars': 'Japanese',
+        'Arabian': 'Middle Eastern'
+    }
     # parse zip-code.xml file
     tree = et.parse(zipCodePath)
     root = tree.getroot()
@@ -75,6 +95,7 @@ def parseBusiness():
     c.close()
 
     yelp_cities = []
+    d = {}
     # parse based on state
     with open(businessPath) as json_data:
         print('parsing business based on state names')
@@ -85,10 +106,10 @@ def parseBusiness():
             city = business['city']
             category = business['categories']
             zipcode = business['postal_code']
-            # # all commented lines below are picking mistakes
-            # # in the raw dataset, they were only used during initial scanning
-            # address = business['address']
-            # # filter out business that are not in the top 1000 cities or not a resturant
+            # all commented lines below are picking mistakes
+            # in the raw dataset, they were only used during initial scanning
+            address = business['address']
+            # filter out business that are not in the top 1000 cities or not a resturant
             if state in usStates and city in cities and checkCategory(category):
                 if [state, city] not in yelp_cities:
                     yelp_cities.append([state, city])
@@ -99,11 +120,22 @@ def parseBusiness():
                     business['state'] = foundState
                 if state not in states.keys():
                     states[state] = []
+                business['categories'] = []
+                for c in category:
+                    if c in categoryDict.keys():
+                        business['categories'].append(categoryDict[c])
+                    else:
+                        business['categories'].append(c)
                 states[state].append(business)
-    json_data.close()
 
+    json_data.close()
+    # sorted_d =  [(k,v) for v,k in sorted(
+    #              [(v,k) for k,v in d.items()]
+    #              )]
+    # for c in sorted_d:
+    #     print(c)
     with open(dataPath + 'filtered_cities.txt', 'w+') as f:
-        for pair in yelp_citiesi:
+        for pair in yelp_cities:
             f.write('%s,%s\n' % (pair[0], pair[1]))
     f.close()
 
@@ -117,6 +149,33 @@ def parseBusiness():
         businessIds[state] = {}
         cities = {}
         for business in states[state]:
+            city = business['city']
+            if city not in businessIds[state].keys():
+                businessIds[state][city] = []
+            businessIds[state][city].append(business['business_id'])
+            if city not in cities:
+                cities[city] = []
+            cities[city].append(business)
+        for city in cities:
+            with open(directory + '/%s.json' % city, 'w+') as f:
+                json.dump(cities[city], f)
+            f.close()
+        with open(directory + '/%s_business-ids.json' % state, 'w+') as f:
+            json.dump(businessIds[state], f)
+        f.close()
+
+    # save business info for consumer
+    businessIds = {}
+    for state in tqdm(states):
+        directory = dataPath + 'business_consumer/' + state
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        businessIds[state] = {}
+        cities = {}
+        for business in states[state]:
+            isOpen = business['is_open']
+            if isOpen == 0:
+                continue;
             city = business['city']
             if city not in businessIds[state].keys():
                 businessIds[state][city] = []
