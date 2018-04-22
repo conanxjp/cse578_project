@@ -7,8 +7,8 @@ var accessToken = "pk.eyJ1IjoiY29uYW54anAiLCJhIjoiY2pkcWluNnVqMXl1eTMzcWhwOG9pcz
 var map = L.map('map', {
   center: [40, -97],
   zoomSnap: 0.1,
-  zoom: 4.6,
-  minZoom: 4.6,
+  zoom: 3.6,
+  minZoom: 3.6,
   maxZoom: 18
   // zoomControl: false
 });
@@ -475,7 +475,7 @@ function highlightSelection(bid) {
 }
 
 function addFilterSliders() {
-  var aspects = ['Food','Ambience','Price','Service'];
+  var aspects = ['Food','Ambience','Price','Service', 'Misc.'];
   var controls = d3.select('#filter_controls');
   controls.selectAll('input')
           .data(aspects).enter()
@@ -490,6 +490,15 @@ function addFilterSliders() {
           .attr('class', 'slider');
 }
 
+var testButton = d3.select('#test_button').on('click', testfunction);
+
+var testData = null;
+function testfunction() {
+  d3.json('../assets/data/RESDUcs7fIiihp38-d6_6g_reviews.json', function(error, data) {
+    testData = data;
+  })
+
+}
 
 function drawWordCloud() {
   var fill = d3.scaleOrdinal(d3.schemeCategory20);

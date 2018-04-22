@@ -276,11 +276,11 @@ def parseCheckIn():
     f.close()
 
     for state in checkins.keys():
-        directory = dataPath + 'checkin_consumer/' + state
+        directory = dataPath + 'checkin/' + state
         if not os.path.exists(directory):
             os.makedirs(directory)
         for city in checkins[state].keys():
-            directory = dataPath + 'checkin_consumer/%s/%s/' % (state, city)
+            directory = dataPath + 'checkin/%s/%s/' % (state, city)
             # print(directory)
             if not os.path.exists(directory):
                 os.makedirs(directory)
@@ -387,12 +387,12 @@ def getBusinessInfo(stateAbbPath, dataPath):
     usStates = getStateAbbs(stateAbbPath)
     # read business-ids.txt
     # check dependent files
-    directory = dataPath + 'business_consumer/'
+    directory = dataPath + 'business/'
     if not os.path.exists(directory):
         parseBusiness()
     businessIds = {}
     for state in usStates:
-        directory = dataPath + 'business_consumer/' + state
+        directory = dataPath + 'business/' + state
         if os.path.exists(directory):
             with open(directory + '/%s_business-ids.json' % state, 'r') as f:
                 for line in f:

@@ -1,5 +1,5 @@
 #map {
-   height: 400px;
+   height: 250px;
 }
 
 #main-container {
@@ -14,8 +14,12 @@
   padding: 0 0;
 }
 
+#state_city_list {
+  padding: 0 0 10px 10px;
+}
+
 #select_rest {
-  padding-top: 20px;
+  padding: 0 0 10px 15px;
 }
 
 #rest_list {
@@ -23,7 +27,7 @@
 }
 
 #category {
-  padding-bottom: 15px;
+  padding: 10px 0 10px 15px;
 }
 
 .container {

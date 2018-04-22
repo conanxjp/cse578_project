@@ -21,54 +21,50 @@ def loadReviews():
     consolidate them based on state and store as csv file for further
     preprocessing the text in them
     """
-    usStates, businessIds = pp.getBusinessInfo(stateAbbPath, dataPath)
-
-    # parse based on state
+    def isEnglish(s):
+        try:
+            s.encode(encoding='utf-8').decode('ascii')
+        except UnicodeDecodeError:
+            return False
+        else:
+            return True
     headers = ['review_id', 'user_id', 'business_id', 'stars', 'date', 'text', 'useful', 'funny', 'cool']
+    usStates, businessIds = pp.getBusinessInfo(stateAbbPath, dataPath)
     directory = dataPath + 'processed_reviews'
-    reviews = {}
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-    with open(reviewPath) as json_data:
-        print('parsing review data based on state names')
-        for i, line in enumerate(tqdm(json_data)):
-            if i > 500:
-                break
-            review = json.loads(line)
-            state, city = pp.checkBusinessLocation(review['business_id'], businessIds)
-            if state is not None:
-                filepath = directory + '/%s_reviews.csv' % state
-                mode = 'a'
-                if not os.path.exists(filepath):
-                    mode = 'w+'
-                with open(filepath, mode) as f:
-                    writer = csv.writer(f)
-                    if mode == 'w+':
-                        writer.writerow(headers)
-                    writer.writerow(review.values())
+    stateReviews = {}
+    i = 0
+    for state in usStates:
+        statePath = reviewPath + state
+        j = 0
+        if os.path.exists(statePath):
+            stateReviews[state] = pd.DataFrame(columns = headers)
+            for subdir, _, files in tqdm(os.walk(statePath)):
+                for file in files:
+                    if '.json' in file and i < 10:
+                        with open(os.path.join(subdir, file)) as f:
+                            for line in f:
+                                reviews = json.loads(line)
+                                for review in reviews:
+                                    if isEnglish(review['text']):
+                                        stateReviews[state].loc[j] = review
+                                        j = j + 1
+                    i = i + 1
+    return stateReviews
 
-def cleanReviewText():
+def cleanReviewText(reviews):
     """
     clean the review text
     """
-    directory = dataPath + 'processed_reviews/'
-    print('load dictionary')
-    dictionary = getDict(dictPath)
-    usStates = pp.getStateAbbs(stateAbbPath)
-    for state in tqdm(usStates):
-        filepath = directory + '%s_reviews.csv' % state
-        texts = []
-        if os.path.exists(filepath):
-            reviews = pd.read_csv(filepath)
-            for i, text in enumerate(reviews['text']):
-                text = sent_tokenize(text)
-                text = cleanup(text, dictionary)
-                reviews.at[i, 'text'] = text
-                [texts.append(sentence) for sentence in text]
-            cleanFilepath = directory + '%s_clean_reviews.csv' % state
-            reviews.to_csv(cleanFilepath)
-            print('create %s vocabulary' % state)
-            createStateVocabulary(texts, state)
+    for i, review in enumerate(reviews):
+        review = sent_tokenize(review)
+        print(review)
+    #     review = cleanup(review, dictionary)
+    #     reviews.at[i, 'text'] = text
+    #     [texts.append(sentence) for sentence in text]
+    # cleanFilepath = directory + '%s_clean_reviews.csv' % state
+    # reviews.to_csv(cleanFilepath)
+    # print('create %s vocabulary' % state)
+    # createStateVocabulary(texts, state)
 
 def cleanup(text, dictionary):
     text = cleanOp(text, re.compile(r'-'), dictionary, correctDashWord)
@@ -231,6 +227,7 @@ if __name__ == '__main__':
 
     hobj = hunspell.HunSpell(cf.HUNSPELL_PATH + cf.HUNSPELL_DICT[0],
                              cf.HUNSPELL_PATH + cf.HUNSPELL_DICT[1])
-    loadReviews()
-    cleanReviewText()
-    createVocabulary()
+
+    test = loadReviews()
+    cleanReviewText(test['AZ']['text'])
+    # createVocabulary()

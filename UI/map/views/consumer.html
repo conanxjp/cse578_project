@@ -51,54 +51,45 @@
         <div class="row">
           <!-- map -->
           <div class="col-sm-5">
+            <!-- row: state and city lists -->
+            <div id="state_city_list" class="row">
+              <div class="col-sm">
+                <select id="state_list" class="" name="state"></select>
+              </div>
+              <div class="col-sm">
+                <select id="city_list" class="" name="city"></select>
+              </div>
+            </div>
             <div id="map"></div>
+            <div id="category" class="row">
+              <!-- category list -->
+              <select id="category_list" class="" name=""></select>
+            </div>
+            <!-- row: restaurant list  -->
+            <div id="select_rest" class="row">
+              <select id="rest_list" class="" size = 10></select>
+            </div>
+            <button id='test_button' type="button" name="button">Test</button>
+
           </div>
           <!-- control and info -->
           <div class="col-sm-7">
             <!-- control and info container -->
             <div id="control_info_container" class="container">
               <!-- row: control and info -->
-              <div class="row">
-                <!-- state, city and restaurant list -->
-                <div class="col-sm-7">
-                  <!-- row: state and city lists -->
-                  <div class="row">
-                    <div class="col-sm">
-                      <select id="state_list" class="" name="state"></select>
-                    </div>
-                    <div class="col-sm">
-                      <select id="city_list" class="" name="city"></select>
-                    </div>
-                  </div>
-                  <!-- row: restaurant list  -->
-                  <div id="select_rest" class="row">
-                    <select id="rest_list" class="" size = 10></select>
-                  </div>
-                </div>
+              <div class="col-sm-7">
                 <!-- filter controls -->
-                <div class="col-sm-5">
-                  <div id="category" class="row">
-                    <!-- category list -->
-                    <select id="category_list" class="" name=""></select>
-                  </div>
-                  <!-- aspect filters -->
-                  <div id="filter_controls" class="row"></div>
-                </div>
+                <!-- aspect filters -->
+                <div id="filter_controls" class="row"></div>
+                <!-- star rating -->
+                <div id="review_star" class="row"></div>
+                <!-- row: text cloud -->
+                <div id="good_text_cloud" class="row"></div>
+                <div id="bad_text_cloud" class="row"></div>
               </div>
-              <!-- row: info -->
-              <div class="row">
+              <div class="col-sm-5">
                 <!-- checkin info -->
                 <div id="checkin" class="col-sm-4 info-col"></div>
-                <!-- review info -->
-                <div class="col-sm-8">
-                  <!-- star rating -->
-                  <div id="review_star" class="row"></div>
-                  <!-- row: text cloud -->
-                  <div class="row">
-                    <div id="good_text_cloud" class="col-sm-6 info-col"></div>
-                    <div id="bad_text_cloud" class="col-sm-6 info-col"></div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
