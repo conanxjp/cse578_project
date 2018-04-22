@@ -85,9 +85,15 @@ var states;
 var cityContours;
 var markers;
 var business;
+var categoryBusiness = null;
 var checkins;
-// temporary category list for testing
-var categories = ['American (New)', 'American (Traditional)', 'Bakeries', 'Bars'];
+var predefinedCategory = ["African", "American (New)", "American (Traditional)",
+                  "Asian Fusion", "Bakeries", "Barbeque", "Bars", "Beverage",
+                  "Breakfast", "Buffets", "Chinese", "Fast Food", "French",
+                  "Greek", "Hawaiian", "Indian", "Italian", "Japanese",
+                  "Korean", "Latin American", "Mediterranean", "Mexican",
+                  "Middle Eastern", "Noodles", "Pizza", "Seafood", "Thai", "Vegetarian",
+                  "Vietnamese"];
 var categoryList = d3.select('#category_list');
 var stateList = d3.select('#state_list');
 var cityList = d3.select('#city_list');
@@ -103,6 +109,7 @@ var checkinHeight = 80; //d3.select('#checkin').node().getBoundingClientRect().h
 // var checkinHourAxis = d3.axisBottom(checkinHourScale);
 // checkinHourAxis.ticks(24);
 // checkinHourAxis.tickValues(d3.range(3).map(i => i * 6 + 6));
+var aspects = ['Food','Ambience','Price','Service', 'Misc'];
 var test;
 // define mouseover event handler
 function highlightFeature(e) {
@@ -233,13 +240,26 @@ function resizeBounds(bounds, factor) {
 }
 
 function loadBusiness(state, city) {
-  var businessJsonPath = DIR_BUSINESS + `${state}/${city}.json`;
+  var businessJsonPath = DIR_BUSINESS + `${state}/${city}_business_final.json`;
   d3.json(businessJsonPath, function(error, data) {
-    business = rankBusiness('name', data);
+    var categories = getCategories(data);
+    business = updateScore(data);
+    business = rankBusiness(business);
     addBusinessMarkers();
-    addCategoryList();
+    addCategoryList(categories);
   });
   loadCheckin(state, city);
+}
+
+function getCategories(business) {
+  var categories = new Set();
+  business.forEach(function(b) {
+    b.categories.forEach(function(c) {
+      if (predefinedCategory.indexOf(c) >= 0)
+        categories.add(c);
+    });
+  });
+  return Array.from(categories);
 }
 
 function addBusinessMarkers() {
@@ -262,8 +282,45 @@ function addBusinessMarkers() {
   map.fitBounds(markers.getBounds());
 }
 
-function rankBusiness(key, data) {
-  return data.sort((a, b) => d3.ascending(a.name, b.name));
+function updateScore(data) {
+  var aspectWeights = [];
+  aspects.forEach(function(a) {
+    var aspect = '#' + `${a}`;
+    aspectWeights.push(d3.select(aspect).property('value'))
+  });
+  data.map(function(b) {
+    b.score = 0;
+    aspects.forEach(function(a, i) {
+      b.score += b[a.toLowerCase()] * aspectWeights[i];
+    });
+  });
+  return data;
+}
+
+function updateStars(data) {
+  var sum = 0;
+  data.forEach(function(b) {
+    sum += b.score
+  });
+  data.map(function(b, i) {
+    b.stars_p = b.stars_x + (b.score - sum/data.length) / sum;
+    if (b.stars_p > 5 || b.stars_p < 0) {
+        b.stars_p = b.stars_p > 5 ? 5 : b.stars_p;
+        b.stars_p = b.stars_p < 0 ? 0 : b.stars_p;
+    }
+  });
+  return data;
+}
+
+function dispStar(selectedBusiness) {
+  d3.select('#stars').remove();
+  var stars = Math.round(selectedBusiness.stars_p * 10) / 10;
+  console.log(selectedBusiness);
+  d3.select('#review_star').append('label').attr('id', 'stars').text('Rating: ' + `${stars}` + '/5.0')
+}
+
+function rankBusiness(data) {
+  return data.sort((a, b) => d3.descending(a.score, b.score));
 }
 
 function addBusinessList(businessList) {
@@ -281,6 +338,14 @@ function selectRest() {
   var selectedBusiness = business.find(function(b) {return b.business_id == businessId;});
   highlightMarker(businessId);
   showCheckin(businessId);
+  drawWordCloud(selectedBusiness['good words'], true);
+  drawWordCloud(selectedBusiness['bad words'], false);
+  data = categoryBusiness;
+  if (!categoryBusiness) {
+    data = business;
+  }
+  updateStars(data);
+  dispStar(selectedBusiness);
 }
 
 function highlightMarker(bid) {
@@ -424,7 +489,7 @@ function zoomToState(state) {
   map.setView(center, 8)
 }
 
-function addCategoryList() {
+function addCategoryList(categories) {
   categoryList.selectAll('option').remove();
   categoryList.selectAll('option')
                 .data(categories).enter()
@@ -440,10 +505,19 @@ function addCategoryList() {
 
 function filterCategory() {
   var category = $('#category_list').val();
-  var filteredBusiness = business.filter(function(b) {
+  categoryBusiness = business.filter(function(b) {
     return b.categories.constructor === Array ? b.categories.includes(category) : b.categories === category;
   });
-  addFilteredBusinessMarkers(filteredBusiness);
+  if (categoryBusiness.length != 0) {
+    addFilteredBusinessMarkers(categoryBusiness);
+  }
+  // TODO
+  else {
+    restList.selectAll('option').remove();
+    var msg = 'Sorry! No ' +`${category}` + ' available in this area';
+    restList.append('option').text(msg);
+    console.log('no results category');
+  }
 }
 
 function addFilteredBusinessMarkers(filteredBusiness) {
@@ -458,56 +532,92 @@ function addFilteredBusinessMarkers(filteredBusiness) {
   filteredBusiness.forEach(function(b) {
     var marker = L.marker(L.latLng(b.latitude, b.longitude), {title: b.name, id: b.business_id});
     marker.bindPopup(b.name);
-    //TODO add click event handler
     marker.on('click', function() {highlightSelection(b.business_id);});
     regions.push(marker);
     // markers.addLayer(marker);
   });
+  // TODO not centered at the selected marker
+  if (regions.length == 1) {
+    markers.addLayer(marker);
+    // marker.openPopup();
+    // console.log(filteredBusiness[0].business_id);
+    // highlightMarker(filteredBusiness[0].business_id);
+  }
   markers.addLayers(regions);
   map.addLayer(markers);
-  map.fitBounds(markers.getBounds());
+  // map.fitBounds(markers.getBounds());
 }
 
 function highlightSelection(bid) {
+  showCheckin(bid);
+  data = categoryBusiness;
+  if (!categoryBusiness) {
+    data = business
+  }
+  selectedBusiness = data.find(function(b) {return b.business_id == bid;});
+  drawWordCloud(selectedBusiness['good words'], true);
+  drawWordCloud(selectedBusiness['bad words'], false);
   var selected = restList.selectAll('option')
             .filter(function(o) {return o.business_id === bid})
             .attr('selected', '');
 }
 
 function addFilterSliders() {
-  var aspects = ['Food','Ambience','Price','Service', 'Misc.'];
   var controls = d3.select('#filter_controls');
   controls.selectAll('input')
           .data(aspects).enter()
           .append('label').attr('class', 'slider_label').text(function(a) {return a;})
           .append('input')
           .attr('type', 'range')
-          .attr('min', -5)
-          .attr('max', 5)
-          .attr('step', 1)
-          .attr('value', 0)
+          .attr('min', -0)
+          .attr('max', 1)
+          .attr('step', 0.1)
+          .attr('value', 0.5)
           .attr('id', function(a) {return a})
-          .attr('class', 'slider');
+          .attr('class', 'slider')
+          .on('input', sliderFunction);
 }
 
-var testButton = d3.select('#test_button').on('click', testfunction);
-
-var testData = null;
-function testfunction() {
-  d3.json('../assets/data/RESDUcs7fIiihp38-d6_6g_reviews.json', function(error, data) {
-    testData = data;
-  })
-
+function sliderFunction() {
+  var data = null;
+  if (!categoryBusiness) {
+    data = business;
+  }
+  else {
+    data = categoryBusiness;
+  }
+  updateScore(data);
+  data = rankBusiness(data);
+  addBusinessList(data);
 }
 
-function drawWordCloud() {
+var testButton = d3.select('#test_button').on('click', testfunc);
+
+function testfunc() {
+  updateStars(business);
+  business.forEach(function(b) {
+    console.log(b.stars_p);
+  });
+}
+
+
+function drawWordCloud(restWords, isGood) {
+  if (restWords == null) {
+    // TODO draw unavailable
+    return;
+  }
+  var wordCloudId = '#good_word_cloud';
+  var wordCloudSvgId = "good_wc_svg";
+  if (!isGood) {
+    wordCloudId = '#bad_word_cloud';
+    wordCloudSvgId = "bad_wc_svg";
+  }
+  var total = Object.values(restWords).reduce((a, b) => a + b, 0);
   var fill = d3.scaleOrdinal(d3.schemeCategory20);
   var layout = d3.layout.cloud()
                   .size([200, 200])
-                    .words([
-    "Hello", "world", "normally", "you", "want", "more", "words",
-    "than", "this"].map(function(d) {
-      return {text: d, size: 10 + Math.random() * 10, test: "haha"};
+                    .words(Object.keys(restWords).map(function(d) {
+      return {text: d, size: 10 + restWords[d] / total * 10, test: "haha"};
     }))
     .padding(5)
     .rotate(function() { return ~~(Math.random() * 2) * 90; })
@@ -518,7 +628,9 @@ function drawWordCloud() {
   layout.start();
 
   function draw(words) {
-    d3.select("#good_text_cloud").append("svg")
+    d3.select('#' + wordCloudSvgId).remove();
+    d3.select(wordCloudId).append("svg")
+    .attr("id", wordCloudSvgId)
     .attr("width", layout.size()[0])
     .attr("height", layout.size()[1])
     .append("g")
@@ -559,20 +671,3 @@ states = L.geoJson(statesData, {
 }).addTo(map);  // add the configured GeoJson layer to map
 
 init();
-
-drawWordCloud();
-
-
-
-
-// var cityCenters = [];
-// for (var i in cities._layers) {
-//   cityCenters.push(cities._layers[i]);
-// }
-
-// cityCenters.sort((a, b) => a.feature.properties.ALAND < b.feature.properties.ALAND ? 1 : (a.feature.properties.ALAND > b.feature.properties.ALAND ? -1:0))
-//
-// cityCenters.slice(0,5).forEach(function(c, i) {
-//   var point = c.feature.geometry.coordinates;
-//   L.marker([point[1], point[0]]).addTo(map);
-// });

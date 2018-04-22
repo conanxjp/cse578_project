@@ -245,9 +245,9 @@ if __name__ == '__main__':
     stateAbbPath = dataPath + 'state2abb.json'
     states = ['AZ', 'NC', 'NV', 'IL', 'OH', 'PA', 'WI']
     max_records = 1e5
-    # reviews = loadReviews()
-    # users = loadUsers()
-    # reviews = analyzeReviews(reviews, users)
-    # createStateBusiness(reviews)
-    # processText()
+    reviews = loadReviews()
+    users = loadUsers()
+    reviews = analyzeReviews(reviews, users)
+    createStateBusiness(reviews)
+    processText()
     summerizeBusinessInfo()
