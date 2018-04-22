@@ -31,15 +31,19 @@
 }
 
 #stars {
-  padding: 0 0 0 30px;
+  padding: 0 0 0 45px;
 }
 
 #rating_svg {
-  padding: 0 0 0 30px;
+  padding: 0 0 0 45px;
 }
 
-#checkin {
-  padding: 0 0 0 30px;
+#week_checkin {
+  padding: 0 0 0 45px;
+}
+
+#hour_checkin {
+  padding: 0 0 0 45px;
 }
 
 .container {
@@ -91,4 +95,16 @@
     height: 10px;
     background: #4CAF50;
     cursor: pointer;
+}
+
+.toolTip {
+	position: absolute;
+  display: none;
+  min-width: 20px;
+  height: auto;
+  background: none repeat scroll 0 0 #ffffff;
+  border: 0.5px solid #ff9900;
+  padding: 10px;
+  text-align: center;
+  font-size: 0.8em;
 }

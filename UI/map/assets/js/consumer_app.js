@@ -102,13 +102,7 @@ var STATE_ZOOM_LEVEL = 8;
 var CITY_ZOOM_LEVEL = 10;
 var DIR_BUSINESS = '../assets/data/business_consumer/';
 var DIR_CHECKIN = '../assets/data/checkin_consumer/';
-var checkinWidth = 200//d3.select('#checkin').node().getBoundingClientRect().width;
-var checkinHeight = 80; //d3.select('#checkin').node().getBoundingClientRect().height;
-// var checkinHourScale = d3.time.scale().domain(function(d3.range()))
-// var checkinHourScale = d3.scaleLinear().domain([0, 24]).range([0, checkinWidth * 0.9]);
-// var checkinHourAxis = d3.axisBottom(checkinHourScale);
-// checkinHourAxis.ticks(24);
-// checkinHourAxis.tickValues(d3.range(3).map(i => i * 6 + 6));
+var tooltip = d3.select("body").append("div").attr("class", "toolTip");
 var aspects = ['Food','Ambience','Price','Service', 'Misc'];
 var test;
 // define mouseover event handler
@@ -315,7 +309,6 @@ function updateStars(data) {
 function dispStar(selectedBusiness) {
   d3.select('#stars').remove();
   var stars = Math.round(selectedBusiness.stars_p * 10) / 10;
-  console.log(selectedBusiness);
   d3.select('#review_star').append('label')
         .attr('id', 'stars').text('Rating: ' + `${stars}` + '/5.0 (' + `${selectedBusiness.review_count}` + ')')
 }
@@ -340,14 +333,18 @@ function drawRating(selectedBusiness) {
             .enter().append('rect')
             .attr('y', function(d, i) {return i * gap})
             .attr('x', 15)
+            .attr('width', 0)
+            .transition()
+            .duration(500)
             .attr('width', function(d, i) {return ratingScale(d);})
             .attr('height', function(d, i) {return bandwidth - 2;})
             .style('fill', function(d, i) {return fill(i);})
   ratingSvg.selectAll('text')
             .data(data)
             .enter().append('text')
-            .attr('y', function(d, i) {return i * gap + bandwidth / 2 + 5;})
+            .attr('y', function(d, i) {return i * gap + bandwidth / 2 + 3;})
             .attr('x', function(d, i) {return 18 + ratingScale(d);})
+            .style('font-size', '0.5em')
             .text(function(d) {return `${Math.round(d * 10)/10}` + '%';})
 }
 
@@ -399,72 +396,145 @@ function loadCheckin(state, city) {
 }
 
 function showCheckin(businessId) {
-  d3.select('#checkin svg').remove();
-  var checkinSvg = d3.select('#checkin').append('svg').attr('width', 220);
+  showWeekCheckin(businessId);
+  dispHourCheckin(businessId);
+}
+
+function showWeekCheckin(businessId) {
+  d3.select('#week_checkin_svg').remove();
+  var checkinSvg = d3.select('#week_checkin').append('svg')
+                      .attr('id', 'week_checkin_svg').attr('width', 250).attr('height', 200)
+                      .attr('transform', 'translate(15, 0)')
+                      .on('mouseout', function() {tooltip.style('display', 'none');});
+
+  var checkinWidth = d3.select('#week_checkin_svg').node().getBoundingClientRect().width;
+  var checkinHeight = d3.select('#week_checkin_svg').node().getBoundingClientRect().height;
+
+  var checkinDayScale = d3.scaleLinear().domain([1,7]).range([0, checkinWidth * 0.70]);
+  var checkinCountScale = d3.scaleLinear().range([0, checkinHeight * 0.6]);
+  var checkin = checkins[businessId];
+  var weekDayMap = {'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6, 'Sunday': 7};
+  var weekDayMapReverse = {1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun'};
+  var max = 0;
+  var daySum = Object.values(checkin).map(function(d) {
+    var sum = Object.values(d).reduce((a, b) => a + b, 0);
+    max = max < sum ? sum : max;
+    return sum;
+  });
+  var divider = Math.ceil(max / 5); // always five ticks
+  max = Math.ceil(max/divider) * divider;
+  checkinCountScale.domain([max, 0]);
+  var checkinDayAxis = d3.axisBottom(checkinDayScale);
+  checkinDayAxis.tickValues(d3.range(7).map(i => i + 1)).tickFormat(function(d) {return weekDayMapReverse[d];});
+  var checkinXAxis = checkinSvg.append('g')
+                              .attr('id', 'week_checkin_x_axis')
+                              .attr('transform', 'translate(65,' + (checkinHeight * 0.6 + 10) + ')')
+                              .transition()
+                              .duration(500)
+                              .call(checkinDayAxis)
+                              .selectAll("text")
+                              .style("text-anchor", "end")
+                              .attr("transform", "rotate(-45)");
+
+  var checkinCountAxis = d3.axisLeft(checkinCountScale);
+  checkinCountAxis.tickValues(d3.range(max/divider).map(i => i * divider));
+  var checkinYAxis = checkinSvg.append('g')
+                              .attr('id', 'week_checkin_y_axis')
+                              .attr('transform', 'translate(50, 10)')
+                              .transition()
+                              .duration(500)
+                              .call(checkinCountAxis);
+
+  var fill = d3.scaleSequential(d3.interpolate('#b4f59f', '#ff1100'))
+                .domain([0, max])
+  var bandwidth = checkinWidth * 0.7 / 7 - 5;
+  var checkinBars = checkinSvg.append('g')
+                                .attr('id', 'week_checkin_bars')
+                                .attr('transform', 'translate(65,' + 8 + ')');
+  checkinBars.selectAll('rect')
+              .data(Object.keys(checkin)).enter()
+              .append('rect')
+              .on('mouseover', hourCheckInMV)
+              .attr('x', function(d, i) {return checkinDayScale(weekDayMap[d]) - bandwidth / 2;})
+              .attr('y', checkinHeight * 0.6)
+              .attr('height', 0)
+              .attr('width', bandwidth)
+              .transition()
+              .duration(500)
+              .style('fill', function(d, i) {return fill(daySum[i])})
+              .attr('height', function(d, i) {return checkinHeight * 0.6 - checkinCountScale(daySum[i]);})
+              .attr('y', function(d, i) {return checkinCountScale(daySum[i]);})
+
+}
+
+function dispHourCheckin(businessId) {
+  d3.select('#hour_checkin_svg').remove();
+  var checkinSvg = d3.select('#hour_checkin').append('svg')
+                      .attr('id', 'hour_checkin_svg').attr('width', 250).attr('height', 200)
+                      .attr('transform', 'translate(15, 0)')
+                      .on('mouseout', function() {tooltip.style('display', 'none');});
   var day = 'Monday';
-  var hoursInt = d3.range(24);
-  var hours = [];
-  hoursInt.forEach(function(h) {hours[`${h}:00`] = 0;});
-  var checkinHourScale = d3.scaleLinear().domain([0, 23]).range([0, checkinWidth * 0.9]);
+  var checkinWidth = d3.select('#hour_checkin_svg').node().getBoundingClientRect().width;
+  // var checkinHourScale = d3.scaleTime().range([0, checkinWidth * 0.80]);
+  var checkinHourScale = d3.scaleLinear().range([0, checkinWidth * 0.80]).domain([0,24]);
+  var checkinHeight = d3.select('#hour_checkin_svg').node().getBoundingClientRect().height;
+  var checkinCountScale = d3.scaleLinear().range([0, checkinHeight * 0.6]);
+  var checkin = checkins[businessId][day]
+  if (checkin) {
+    var checkinHourAxis = d3.axisBottom(checkinHourScale);
+    checkinHourAxis.tickValues(d3.range(6).map(i => i * 4)).tickFormat(function(h) {return h + ':00'});
+    var max = d3.max(Object.values(checkin), function(c) {return Math.max(c);})
+    var divider = Math.ceil(max / 5); // always five ticks
+    max = Math.ceil(max/divider) * divider;
+    checkinCountScale.domain([max, 0]);
+    var checkinCountAxis = d3.axisLeft(checkinCountScale);
+    checkinCountAxis.tickValues(d3.range(max/divider).map(i => i * divider)).tickFormat(function(c) {return c;});
+    var checkinYAxis = checkinSvg.append('g')
+                                .attr('id', 'hour_checkin_y_axis')
+                                .attr('transform', 'translate(45, 10)')
+                                .transition()
+                                .duration(500)
+                                .call(checkinCountAxis);
+    var checkinXAxis = checkinSvg.append('g')
+                                .attr('id', 'hour_checkin_x_axis')
+                                .attr('transform', 'translate(55,' + (checkinHeight * 0.6 + 10) + ')')
+                                .transition()
+                                .duration(500)
+                                .call(checkinHourAxis)
+                                .selectAll("text")
+                                .style("text-anchor", "end")
+                                .attr("transform", "rotate(-45)");;
+    var fill = d3.scaleSequential(d3.interpolate('#b4f59f', '#ff1100'))
+                  .domain([0, max])
+    var bandwidth = checkinWidth * 0.8 / 24;
+    var checkinBars = checkinSvg.append('g')
+                            .attr('id', 'hour_checkin_bars')
+                            .attr('transform', 'translate(55,' + 8 + ')');
+    checkinBars.selectAll('rect')
+                .data(Object.keys(checkin)).enter()
+                .append('rect')
+                .on('mouseover', hourCheckInMV)
+                .attr('x', function(d, i) {return checkinHourScale(parseInt(d.slice(0,-3))) - bandwidth / 2 ;})
+                .attr('y', checkinHeight * 0.6)
+                .attr('height', 0)
+                .attr('width', bandwidth)
+                .transition()
+                .duration(500)
+                .style('fill', function(d) {return fill(checkin[d])})
+                .attr('height', function(d) {return checkinHeight * 0.6 - checkinCountScale(checkin[d]);})
+                .attr('y', function(d) {return checkinCountScale(checkin[d]);})
 
-  var checkinHourAxis = d3.axisBottom(checkinHourScale);
-  checkinHourAxis.tickValues(d3.range(24));
-  if (checkins[businessId]) {
-    var checkin = checkins[businessId][day]
-    if (checkin) {
-      max = 5
-      for (var hour in checkin) {
-        if (checkin[hour] > max) max = checkin[hour];
-        hours[hour] = checkin[hour];
-      }
-      hour = []
-      for (var key in hours) {
-        hour.push(hours[key]);
-      }
-      var checkinCountScale = d3.scaleLinear().domain([max, 0]).range([0, checkinHeight * 0.8]);
-      var checkinCountAxis = d3.axisLeft(checkinHourScale);
-      // checkinCountAxis.tickValues(d3.range(max));
-      var checkinYAxis = checkinSvg.append('g')
-                                  .attr('id', 'checkin_y_axis')
-                                  .attr('transform', 'translate(5, 0)')
-                                  .transition()
-                                  .duration(500)
-                                  .call(checkinCountAxis);;
-      var checkinXAxis = checkinSvg.append('g')
-                                  .attr('id', 'checkin_x_axis')
-                                  .attr('transform', 'translate(5, 120)')
-                                  .transition()
-                                  .duration(500)
-                                  .call(checkinHourAxis);;
-
-      checkinSvg.append('text')
-                  .attr('id', 'checkin_x_axis_label')
-                  .attr('transform', 'translate(100, 150)')
-                  .style('text-anchor', 'middle')
-                  .attr('font-size', '0.5em')
-                  .text('Hour');
-      console.log(hour);
-      var bandwidth = checkinWidth * 0.9 / 24;
-      var checkinBars = checkinSvg.append('g')
-                              .attr('id', 'checkin_bars')
-                              .attr('transform', 'translate(5, 55)');
-      checkinBars.selectAll('rect')
-                  .data(hour).enter()
-                  .append('rect')
-                  .attr('x', function(d, i) {return checkinHourScale(i);})
-                  .attr('height', function(d) {return checkinHeight * 0.8 - checkinCountScale(d);})
-                  .attr('width', bandwidth)
-                  .transition()
-                  .duration(500)
-                  .attr('y', function(d) {return checkinCountScale(d);});
     }
     else {
       // TODO closed picture
     }
-  }
-  else {
-    // console.log(businessId);
-  }
+}
+
+function hourCheckInMV(d) {
+  tooltip.style("left", d3.event.pageX + 10 + "px")
+                .style("top", d3.event.pageY + 10 + "px")
+                .style("display", "inline-block")
+                .html(d);
 }
 
 function zoomOut(e) {
@@ -627,7 +697,7 @@ function sliderFunction() {
 var testButton = d3.select('#test_button').on('click', testfunc);
 
 function testfunc() {
-  drawRating(null)
+  showWeekCheckin(null);
 }
 
 
