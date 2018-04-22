@@ -30,6 +30,18 @@
   padding: 10px 0 10px 15px;
 }
 
+#stars {
+  padding: 0 0 0 30px;
+}
+
+#rating_svg {
+  padding: 0 0 0 30px;
+}
+
+#checkin {
+  padding: 0 0 0 30px;
+}
+
 .container {
   max-width: 95%;
 }

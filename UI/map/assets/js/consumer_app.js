@@ -316,7 +316,39 @@ function dispStar(selectedBusiness) {
   d3.select('#stars').remove();
   var stars = Math.round(selectedBusiness.stars_p * 10) / 10;
   console.log(selectedBusiness);
-  d3.select('#review_star').append('label').attr('id', 'stars').text('Rating: ' + `${stars}` + '/5.0')
+  d3.select('#review_star').append('label')
+        .attr('id', 'stars').text('Rating: ' + `${stars}` + '/5.0 (' + `${selectedBusiness.review_count}` + ')')
+}
+
+function drawRating(selectedBusiness) {
+  d3.select('#rating_svg').remove();
+  var ratingSvg = d3.select('#review_rating').append('svg')
+                                              .attr('id', 'rating_svg')
+                                              .attr('width', 200)
+                                              .attr('height', 200);
+  var data = [];
+  for (var i = 5; i > 0; i --) {
+    data.push(selectedBusiness[i]);
+  }
+  var gap = 150 / 5;
+  var bandwidth = 100 / 5;
+  var ratingScale = d3.scaleLinear().domain([0, 100]).range([0, 200]);
+  var fill = d3.scaleSequential(d3.interpolate('#ff5845', '#45aeff'))
+                      .domain([1, 5])
+  ratingSvg.selectAll('rect')
+            .data(data)
+            .enter().append('rect')
+            .attr('y', function(d, i) {return i * gap})
+            .attr('x', 15)
+            .attr('width', function(d, i) {return ratingScale(d);})
+            .attr('height', function(d, i) {return bandwidth - 2;})
+            .style('fill', function(d, i) {return fill(i);})
+  ratingSvg.selectAll('text')
+            .data(data)
+            .enter().append('text')
+            .attr('y', function(d, i) {return i * gap + bandwidth / 2 + 5;})
+            .attr('x', function(d, i) {return 18 + ratingScale(d);})
+            .text(function(d) {return `${Math.round(d * 10)/10}` + '%';})
 }
 
 function rankBusiness(data) {
@@ -346,6 +378,7 @@ function selectRest() {
   }
   updateStars(data);
   dispStar(selectedBusiness);
+  drawRating(selectedBusiness);
 }
 
 function highlightMarker(bid) {
@@ -594,10 +627,7 @@ function sliderFunction() {
 var testButton = d3.select('#test_button').on('click', testfunc);
 
 function testfunc() {
-  updateStars(business);
-  business.forEach(function(b) {
-    console.log(b.stars_p);
-  });
+  drawRating(null)
 }
 
 
@@ -608,21 +638,32 @@ function drawWordCloud(restWords, isGood) {
   }
   var wordCloudId = '#good_word_cloud';
   var wordCloudSvgId = "good_wc_svg";
+  var fill = '#ff5845';
   if (!isGood) {
     wordCloudId = '#bad_word_cloud';
     wordCloudSvgId = "bad_wc_svg";
+    fill = '#45aeff'
   }
   var total = Object.values(restWords).reduce((a, b) => a + b, 0);
-  var fill = d3.scaleOrdinal(d3.schemeCategory20);
+  var max = Object.values(restWords).sort((a, b) => b - a);
+
+  var opacity = d3.scaleLinear().domain([max[max.length - 1] + 0.5, 15 + max[0] / total * 100]).range([0,1])
+  // console.log(opacity(20));
+  // var fill = d3.scaleOrdinal(d3.schemeCategory20);
   var layout = d3.layout.cloud()
-                  .size([200, 200])
+                  .timeInterval(10)
+                  .size([200,200])
                     .words(Object.keys(restWords).map(function(d) {
-      return {text: d, size: 10 + restWords[d] / total * 10, test: "haha"};
+      return {text: d, size: 15 + restWords[d] / total * 100 };
     }))
     .padding(5)
-    .rotate(function() { return ~~(Math.random() * 2) * 90; })
+    // .rotate(function() { return (~~(Math.random() * 6) - 3) * 30; })
+    .rotate(function() { return 0;})
+    // .rotate(function() { return ~~(Math.random() * 2) * 90; })
     .font("Impact")
+    .text(function(d) {return d.text})
     .fontSize(function(d) { return d.size; })
+    .spiral("archimedean")
     .on("end", draw);
 
   layout.start();
@@ -640,7 +681,8 @@ function drawWordCloud(restWords, isGood) {
     .enter().append("text")
     .style("font-size", function(d) { return d.size + "px"; })
     .style("font-family", "Impact")
-    .style("fill", function(d, i) { return fill(i); })
+    .style("fill-opacity", function(d) { return opacity(d.size); })
+    .style("fill", function(d, i) { return fill; })
     .attr("text-anchor", "middle")
     .attr("transform", function(d) {
       return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
