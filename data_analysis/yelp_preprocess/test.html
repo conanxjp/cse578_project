@@ -3,9 +3,10 @@
   <head>
     <meta charset="utf-8">
     <title></title>
+    <script type="text/javascript" src="./package/js/jquery.js"></script>
+    <script type="text/javascript" src="./package/js/awselect.js"></script>
+    <link href="./package/css/awselect.css" rel="stylesheet" />
     <script src="https://d3js.org/d3.v4.min.js"></script>
-    <script src="./d3.layout.cloud.js">
-    </script>
     <style> /* set the CSS */
 
     .line {
@@ -18,7 +19,11 @@
   </head>
   <body>
 
-
+    <select name="food_selector" data-placeholder="Select a food to eat">
+    	<option value="pancakes">Pancakes</option>
+    	<option value="pancakes">cakes</option>
+      <option value="pancakes">Cheese cakes</option>
+    </select>
 <body>
 
 <!-- load the d3.js library -->
@@ -28,6 +33,7 @@
       d3.json('test.json', function(error, data) {
         test = data;
       });
+      $('select').awselect()
 
     </script>
 

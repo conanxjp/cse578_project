@@ -4,6 +4,8 @@ body {
   background: -webkit-linear-gradient(top, rgba(173,243,235,1) 0%,rgba(225,251,248,1) 35%,rgba(255,255,255,1) 100%,rgba(255,255,255,1) 100%); /* Chrome10-25,Safari5.1-6 */
   background: linear-gradient(to bottom, rgba(173,243,235,1) 0%,rgba(225,251,248,1) 35%,rgba(255,255,255,1) 100%,rgba(255,255,255,1) 100%); /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
   filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#adf3eb', endColorstr='#ffffff',GradientType=0 ); /* IE6-9 */
+  background-repeat: no-repeat;
+  font-family: 'Raleway', sans-serif;
 }
 
 #map {
@@ -20,6 +22,18 @@ body {
 #control_info_container {
   max-width: 100%;
   padding: 0 0;
+}
+
+#filter_container {
+  width: 90%;
+}
+
+#meh_col {
+  padding-top: 10px;
+}
+
+#smile_col {
+  padding-top: 10px;
 }
 
 #state_city_list {
@@ -39,11 +53,22 @@ body {
 }
 
 #stars {
-  padding: 0 0 0 45px;
+  padding: 0 0 10px 10px;
 }
 
 #rating_svg {
-  padding: 0 0 0 45px;
+  padding: 0 0 0 0px;
+}
+
+#review_stars_col {
+  text-align: left;
+  padding-left: 30px;
+  padding-right: 0;
+}
+
+#review_rating_col {
+  padding-right: 20px;
+  padding-left: 0;
 }
 
 #week_checkin {
@@ -78,6 +103,26 @@ body {
 .slider_label {
   width: 100%;
   margin-bottom: 0px;
+}
+
+.fas {
+  display: inline-block;
+  width: 100%;
+  text-align:center;
+}
+
+.far {
+  display: inline-block;
+  width: 100%;
+  text-align:center;
+}
+
+.fa-meh {
+  color: purple;
+}
+
+.fa-smile {
+  color: #ff7707;
 }
 
 .slider {
@@ -116,11 +161,25 @@ body {
 .toolTip {
 	position: absolute;
   display: none;
-  min-width: 20px;
+  min-width: 10px;
   height: auto;
   background: none repeat scroll 0 0 #ffffff;
-  border: 0.5px solid #ff9900;
+  background-color: #d1fffa;
+  border: 0px solid #ff9900;
+  border-radius: 8px;
   padding: 10px;
   text-align: center;
-  font-size: 0.8em;
+  font-size: 0.6em;
+  opacity: 0.8;
+}
+
+span.stars, span.stars span {
+    display: inline-block;
+    background: url('../img/stars.png') 0 -16px repeat-x;
+    width: 80px;
+    height: 16px;
+}
+
+span.stars span {
+    background-position: 0 -1px;
 }

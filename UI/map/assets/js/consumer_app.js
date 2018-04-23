@@ -77,7 +77,6 @@ function cityStyle(feature) {
   };
 }
 
-
 /***************************************
  * Add interactions                    *
  ***************************************/
@@ -160,6 +159,7 @@ function zoomToStateFeature(e) {
   var foundCapital = false;
   var rank = 1000;
   $('#state_list').val(state2abb[stateName]);
+  $('#state_list').trigger('chosen:updated');
   var cities = [];
   if (cityContours) {map.removeLayer(cityContours);}
   cityContours = L.geoJson(citiesData, {
@@ -193,8 +193,10 @@ function addCityList(cities) {
             .attr('value', function(c) {return c;})
             .text(function(c) {return c;});
   cityList.append('option')
-            .attr('disabled', '').attr('selected', '').attr('value', '').text('-- select a city --');
-  cityList.on('change', function() {zoomToCity()});
+            .attr('disabled', '').attr('selected', '').attr('value', '');
+  $('#city_list').trigger("chosen:updated");
+
+  // cityList.on('change', function() {zoomToCity()});
 }
 
 // define mouse click zoom effect for city
@@ -206,6 +208,7 @@ function zoomToCityFeature(e) {
   var state = cityInfo.stateAbb;
   var city = cityInfo.city;
   $('#city_list').val(city);
+  $('#city_list').trigger('chosen:updated');
   loadBusiness(state, city);
 }
 
@@ -238,6 +241,7 @@ function loadBusiness(state, city) {
   d3.json(businessJsonPath, function(error, data) {
     var categories = getCategories(data);
     business = updateScore(data);
+    business = updateStars(business);
     business = rankBusiness(business);
     addBusinessMarkers();
     addCategoryList(categories);
@@ -306,19 +310,35 @@ function updateStars(data) {
   return data;
 }
 
+$.fn.stars = function() {
+    return $(this).each(function() {
+        // Get the value
+        var val = parseFloat($(this).html());
+        // Make sure that the value is in 0 - 5 range, multiply to get width
+        var size = Math.max(0, (Math.min(5, val))) * 16;
+        // Create stars holder
+        var $span = $('<span />').width(size);
+        // Replace the numerical value with stars
+        $(this).html($span);
+    });
+}
+
 function dispStar(selectedBusiness) {
   d3.select('#stars').remove();
   var stars = Math.round(selectedBusiness.stars_p * 10) / 10;
   d3.select('#review_star').append('label')
-        .attr('id', 'stars').text('Rating: ' + `${stars}` + '/5.0 (' + `${selectedBusiness.review_count}` + ')')
+              .attr('id', 'stars').html('Rating (' + `${selectedBusiness.review_count}` + '): <span class="stars">' + `${stars}` + '</span>')
+  // $('span.stars').stars();
+        // .attr('id', 'stars').text('Rating: ' + `${stars}` + '/5.0 (' + `${selectedBusiness.review_count}` + ')')
 }
 
 function drawRating(selectedBusiness) {
   d3.select('#rating_svg').remove();
   var ratingSvg = d3.select('#review_rating').append('svg')
                                               .attr('id', 'rating_svg')
-                                              .attr('width', 200)
-                                              .attr('height', 200);
+                                              .attr('width', 150)
+                                              .attr('height', 200)
+                                              .attr('transform', 'translate(-25,0)');
   var data = [];
   for (var i = 5; i > 0; i --) {
     data.push(selectedBusiness[i]);
@@ -328,9 +348,20 @@ function drawRating(selectedBusiness) {
   var ratingScale = d3.scaleLinear().domain([0, 100]).range([0, 200]);
   var fill = d3.scaleSequential(d3.interpolate('#ff5845', '#45aeff'))
                       .domain([1, 5])
+  // d3.select('#test').attr('class', 'stars').text('1');
+  // $('span.stars').stars();
+  // ratingSvg.selectAll('span')
+  //           .data(data).enter()
+  //           .append('span').attr('class', 'stars').text('1.0').call(stars);
+  // ratingSvg.append('span').attr('class', 'stars').text('1.0');
+  // $('span.stars').stars();
+  d3.range(5).map(function(i) {
+    d3.select('#star_' + `${5 - i}`).attr('class', 'stars').style('padding-bottom', `${30}` + 'px').style('display', 'block').text(5 - i);
+  });
+  $('span.stars').stars();
   ratingSvg.selectAll('rect')
-            .data(data)
-            .enter().append('rect')
+            .data(data).enter()
+            .append('rect')
             .attr('y', function(d, i) {return i * gap})
             .attr('x', 15)
             .attr('width', 0)
@@ -349,7 +380,7 @@ function drawRating(selectedBusiness) {
 }
 
 function rankBusiness(data) {
-  return data.sort((a, b) => d3.descending(a.score, b.score));
+  return data.sort((a, b) => (b.stars_p - a.stars_p ) || (b.scores - a.scores));
 }
 
 function addBusinessList(businessList) {
@@ -359,7 +390,8 @@ function addBusinessList(businessList) {
             .append('option')
             .attr('value', function(b) {return b.business_id;})
             .text(function(b) {return b.name;});
-  restList.on('change', selectRest);
+  // restList.on('change', selectRest);
+  $('#rest_list').trigger("chosen:updated");
 }
 
 function selectRest() {
@@ -522,8 +554,7 @@ function dispHourCheckin(businessId) {
                 .duration(500)
                 .style('fill', function(d) {return fill(checkin[d])})
                 .attr('height', function(d) {return checkinHeight * 0.6 - checkinCountScale(checkin[d]);})
-                .attr('y', function(d) {return checkinCountScale(checkin[d]);})
-
+                .attr('y', function(d) {return checkinCountScale(checkin[d]);});
     }
     else {
       // TODO closed picture
@@ -564,6 +595,7 @@ function onEachCityFeature(feature, layer) {
 
 function zoomToState(state) {
   cityList.selectAll('option').remove();
+  // $('#state_list').val(state2abb[state]);
   var center;
   var foundCapital = false;
   var rank = 1000;
@@ -601,9 +633,10 @@ function addCategoryList(categories) {
                 .text(function(c) {return c;});
   categoryList.append('option')
                 .attr('selected', '')
-                .attr('value', 'all')
-                .text('All');
-  categoryList.on('change', filterCategory);
+                .attr('value', 'all');
+  $('#category_list').trigger('chosen:updated');
+
+  // categoryList.on('change', filterCategory);
 }
 
 function filterCategory() {
@@ -653,6 +686,9 @@ function addFilteredBusinessMarkers(filteredBusiness) {
 
 function highlightSelection(bid) {
   showCheckin(bid);
+  var selectedBusiness = business.find(function(b) {return b.business_id == bid;});
+  dispStar(selectedBusiness);
+  drawRating(selectedBusiness);
   data = categoryBusiness;
   if (!categoryBusiness) {
     data = business
@@ -660,16 +696,31 @@ function highlightSelection(bid) {
   selectedBusiness = data.find(function(b) {return b.business_id == bid;});
   drawWordCloud(selectedBusiness['good words'], true);
   drawWordCloud(selectedBusiness['bad words'], false);
-  var selected = restList.selectAll('option')
-            .filter(function(o) {return o.business_id === bid})
-            .attr('selected', '');
+  console.log(selectedBusiness);
+  $('#rest_list').val(selectedBusiness.name);
+  $('#rest_list').trigger('chosen:updated');
+  // var selected = restList.selectAll('option')
+  //           .filter(function(o) {return o.business_id === bid})
+  //           .attr('selected', '');
 }
 
 function addFilterSliders() {
-  var controls = d3.select('#filter_controls');
+  var controls = d3.select('#filter_slider');
+  // var smileIcon = '<i class="far fa-smile"></i>';
+  // var mehIcon = '<i class="far fa-meh"></i>';
+  var priceIcon = '<i class="fas fa-money-bill-alt" style="color: green"></i>';
+  var foodIcon = '<i class="fas fa-utensils" style="color: #fa9d4b"></i>';
+  var serviceIcon = '<i class="fas fa-hand-holding-heart" style="color: #ff4635"></i>';
+  var ambienceIcon = '<i class="fas fa-image" style="color: #307bfc"></i>';
+  var miscIcon = '<i class="fas fa-ellipsis-h" style="color: #ff29ea"></i>';
+  var aspectDict = {'Food': foodIcon, 'Price': priceIcon, 'Service': serviceIcon, 'Ambience': ambienceIcon, 'Misc': miscIcon};
   controls.selectAll('input')
           .data(aspects).enter()
-          .append('label').attr('class', 'slider_label').text(function(a) {return a;})
+          .append('label').attr('class', 'slider_label').html(function(a) {return aspectDict[a];}).on('mouseover', function(a) {tooltip.style("left", d3.event.pageX + 5 + "px")
+                                              .style("top", d3.event.pageY + 5 + "px")
+                                              .style("display", "inline-block")
+                                              .html(a);})
+                                              .on('mouseout', function() {tooltip.style('display', 'none')})
           .append('input')
           .attr('type', 'range')
           .attr('min', -0)
@@ -690,15 +741,16 @@ function sliderFunction() {
     data = categoryBusiness;
   }
   updateScore(data);
+  updateStars(data);
   data = rankBusiness(data);
   addBusinessList(data);
 }
 
-var testButton = d3.select('#test_button').on('click', testfunc);
-
-function testfunc() {
-  showWeekCheckin(null);
-}
+// var testButton = d3.select('#test_button').on('click', testfunc);
+//
+// function testfunc() {
+//   showWeekCheckin(null);
+// }
 
 
 function drawWordCloud(restWords, isGood) {
@@ -722,7 +774,7 @@ function drawWordCloud(restWords, isGood) {
   // var fill = d3.scaleOrdinal(d3.schemeCategory20);
   var layout = d3.layout.cloud()
                   .timeInterval(10)
-                  .size([200,200])
+                  .size([350,200])
                     .words(Object.keys(restWords).map(function(d) {
       return {text: d, size: 15 + restWords[d] / total * 100 };
     }))
@@ -771,9 +823,28 @@ function init() {
             .text(function(s) {return s.properties.name;});
             // .on('change', function() {console.log(+this.value);});
   stateList.append('option')
-            .attr('disabled', '').attr('selected', '').attr('value', '').text('-- select a state --');
-  stateList.on('change', function() {zoomToState($('#state_list').val());})
+            .attr('disabled', '').attr('selected', '').attr('value', '');
+
+  $("#state_list").chosen({no_results_text: "Oops, nothing found!", width: '80%', placeholder_text_single: 'Select A State'});
+  $('#state_list').on('change', function() {zoomToState($('#state_list').val());});
+  $("#city_list").chosen({no_results_text: "Oops, nothing found!", width: '80%', placeholder_text_single: 'Select A City'});
+  $('#city_list').on('change', function() {zoomToCity()});
+  $("#category_list").chosen({no_results_text: "Oops, nothing found!", width: '95%', placeholder_text_single: 'Select A Cuisine Type'});
+  $('#category_list').on('change', filterCategory);
+  // stateList.on('change', function() {zoomToState($('#state_list').val());})
   addFilterSliders();
+  $("#rest_list").chosen({no_results_text: "Oops, nothing found!", width: '95%', placeholder_text_single: 'Check Out Restaurants'});
+  $("#rest_list").on('change', selectRest);
+  d3.selectAll('.fa-meh').on('mouseover', function() {tooltip.style("left", d3.event.pageX + 5 + "px")
+                                      .style("top", d3.event.pageY + 5 + "px")
+                                      .style("display", "inline-block")
+                                      .html("Meh ...");})
+                      .on('mouseout', function() {tooltip.style("display", "None")})
+  d3.selectAll('.fa-smile').on('mouseover', function() {tooltip.style("left", d3.event.pageX + 5 + "px")
+                                      .style("top", d3.event.pageY + 5 + "px")
+                                      .style("display", "inline-block")
+                                      .html("Yeah, more!");})
+                      .on('mouseout', function() {tooltip.style("display", "None")})
 }
 
 // add style and event listeners to each layer in GeoJson
