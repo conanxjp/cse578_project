@@ -286,6 +286,12 @@ function updateScore(data) {
     var aspect = '#' + `${a}`;
     aspectWeights.push(d3.select(aspect).property('value'))
   });
+  var sum = aspectWeights.reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
+  if (sum == 0) {
+    data.map(function(b) {
+      b.score = 1;
+    });
+  }
   data.map(function(b) {
     b.score = 0;
     aspects.forEach(function(a, i) {
@@ -429,7 +435,9 @@ function loadCheckin(state, city) {
 
 function showCheckin(businessId) {
   showWeekCheckin(businessId);
-  dispHourCheckin(businessId);
+  var weekDayMapReverse = {1: 'Monday', 2: 'Tuesday', 3: 'Wednesday', 4: 'Thursday', 5: 'Friday', 6: 'Saturday', 0: 'Sunday'};
+  var day = new Date().getDay();
+  dispHourCheckin(businessId, weekDayMapReverse[day]);
 }
 
 function showWeekCheckin(businessId) {
@@ -445,6 +453,10 @@ function showWeekCheckin(businessId) {
   var checkinDayScale = d3.scaleLinear().domain([1,7]).range([0, checkinWidth * 0.70]);
   var checkinCountScale = d3.scaleLinear().range([0, checkinHeight * 0.6]);
   var checkin = checkins[businessId];
+  if (checkin == null) {
+    // TODO display no checkin info.
+    return;
+  }
   var weekDayMap = {'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6, 'Sunday': 7};
   var weekDayMapReverse = {1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun'};
   var max = 0;
@@ -486,7 +498,7 @@ function showWeekCheckin(businessId) {
   checkinBars.selectAll('rect')
               .data(Object.keys(checkin)).enter()
               .append('rect')
-              .on('mouseover', hourCheckInMV)
+              .on('mouseover', function(d) {overDayBar(businessId, d)})
               .attr('x', function(d, i) {return checkinDayScale(weekDayMap[d]) - bandwidth / 2;})
               .attr('y', checkinHeight * 0.6)
               .attr('height', 0)
@@ -496,16 +508,20 @@ function showWeekCheckin(businessId) {
               .style('fill', function(d, i) {return fill(daySum[i])})
               .attr('height', function(d, i) {return checkinHeight * 0.6 - checkinCountScale(daySum[i]);})
               .attr('y', function(d, i) {return checkinCountScale(daySum[i]);})
-
 }
 
-function dispHourCheckin(businessId) {
+function overDayBar(bid, day) {
+  hourCheckInMV(day);
+  dispHourCheckin(bid, day);
+}
+
+function dispHourCheckin(businessId, day) {
   d3.select('#hour_checkin_svg').remove();
   var checkinSvg = d3.select('#hour_checkin').append('svg')
                       .attr('id', 'hour_checkin_svg').attr('width', 250).attr('height', 200)
                       .attr('transform', 'translate(15, 0)')
                       .on('mouseout', function() {tooltip.style('display', 'none');});
-  var day = 'Monday';
+  // var day = 'Monday';
   var checkinWidth = d3.select('#hour_checkin_svg').node().getBoundingClientRect().width;
   // var checkinHourScale = d3.scaleTime().range([0, checkinWidth * 0.80]);
   var checkinHourScale = d3.scaleLinear().range([0, checkinWidth * 0.80]).domain([0,24]);
@@ -555,6 +571,8 @@ function dispHourCheckin(businessId) {
                 .style('fill', function(d) {return fill(checkin[d])})
                 .attr('height', function(d) {return checkinHeight * 0.6 - checkinCountScale(checkin[d]);})
                 .attr('y', function(d) {return checkinCountScale(checkin[d]);});
+    checkinSvg.append('text').attr('transform', 'translate(' + (checkinWidth / 2 - 10) + ',' + (checkinHeight - 30) + ')')
+                .attr('font-size', '0.6em').text(day);
     }
     else {
       // TODO closed picture
@@ -723,7 +741,7 @@ function addFilterSliders() {
                                               .on('mouseout', function() {tooltip.style('display', 'none')})
           .append('input')
           .attr('type', 'range')
-          .attr('min', -0)
+          .attr('min', 0)
           .attr('max', 1)
           .attr('step', 0.1)
           .attr('value', 0.5)
@@ -740,10 +758,17 @@ function sliderFunction() {
   else {
     data = categoryBusiness;
   }
+  if (data == null) {
+    return;
+  }
   updateScore(data);
   updateStars(data);
-  data = rankBusiness(data);
-  addBusinessList(data);
+  business = rankBusiness(data);
+  addBusinessList(business);
+  var i = 0
+  var a = business.find(function(b) {i += 1; return b.name == 'Fu Sheng'});
+  console.log(i);
+  // console.log(a);
 }
 
 // var testButton = d3.select('#test_button').on('click', testfunc);
@@ -754,18 +779,22 @@ function sliderFunction() {
 
 
 function drawWordCloud(restWords, isGood) {
-  if (restWords == null) {
-    // TODO draw unavailable
-    return;
-  }
   var wordCloudId = '#good_word_cloud';
   var wordCloudSvgId = "good_wc_svg";
+  var wordCloudRowId = '#good_word_row';
   var fill = '#ff5845';
   if (!isGood) {
     wordCloudId = '#bad_word_cloud';
     wordCloudSvgId = "bad_wc_svg";
+    wordCloudRowId = '#bad_word_row';
     fill = '#45aeff'
   }
+  if (restWords == null) {
+    $(wordCloudRowId).addClass('hide');
+    // TODO draw unavailable
+    return;
+  }
+  $(wordCloudRowId).removeClass('hide');
   var total = Object.values(restWords).reduce((a, b) => a + b, 0);
   var max = Object.values(restWords).sort((a, b) => b - a);
 

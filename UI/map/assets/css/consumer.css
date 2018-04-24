@@ -125,6 +125,10 @@ body {
   color: #ff7707;
 }
 
+.hide {
+  display: none;
+}
+
 .slider {
     -webkit-appearance: none;
     width: 100%;

@@ -14,7 +14,7 @@ body {
 }
 
 .container {
-    width: 50%;
+    width: 55%;
     height: auto;
 }
 
@@ -45,7 +45,7 @@ p {
   background-repeat: no-repeat;
   opacity: 0;
   z-index: 0;
-  animation: imageAnimation 70s linear infinite;
+  animation: imageAnimation 35s linear infinite;
 }
 
 .slideshow li:nth-child(1) {
@@ -53,27 +53,27 @@ p {
 }
 .slideshow li:nth-child(2) {
   background-image: url(http://i.imgur.com/bPgZbhJ.jpg);
-  animation-delay: 10s;
+  animation-delay: 5s;
 }
 .slideshow li:nth-child(3) {
   background-image: url(http://i.imgur.com/3SuIdCy.jpg);
-  animation-delay: 20s;
+  animation-delay: 10s;
 }
 .slideshow li:nth-child(4) {
   background-image: url(http://i.imgur.com/Yx29nFG.jpg);
-  animation-delay: 30s;
+  animation-delay: 15s;
 }
 .slideshow li:nth-child(5) {
   background-image: url(http://i.imgur.com/xEZDl7Y.jpg);
-  animation-delay: 40s;
+  animation-delay: 20s;
 }
 .slideshow li:nth-child(6) {
   background-image: url(http://i.imgur.com/OK8TguZ.jpg);
-  animation-delay: 50s;
+  animation-delay: 25s;
 }
 .slideshow li:nth-child(7) {
   background-image: url(http://i.imgur.com/VFeT9Y4.jpg);
-  animation-delay: 60s;
+  animation-delay: 30s;
 }
 
 @keyframes imageAnimation {
