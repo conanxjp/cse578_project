@@ -271,7 +271,7 @@ function addBusinessMarkers() {
   addBusinessList(business);
   business.forEach(function(b, i) {
     marker = L.marker(L.latLng(b.latitude, b.longitude), {title: b.name, id: b.business_id});
-    marker.bindPopup(b.name);
+    marker.bindPopup('Ranking: #' + (i + 1) + '. ' + b.name + '<br>' + b.address);
     marker.on('click', function() {highlightSelection(b.business_id);});
     regions.push(marker);
   });
@@ -395,7 +395,7 @@ function addBusinessList(businessList) {
             .data(businessList).enter()
             .append('option')
             .attr('value', function(b) {return b.business_id;})
-            .text(function(b) {return b.name;});
+            .text(function(b, i) {return '#' + (i + 1) + '. ' + b.name;});
   // restList.on('change', selectRest);
   $('#rest_list').trigger("chosen:updated");
 }
@@ -683,9 +683,9 @@ function addFilteredBusinessMarkers(filteredBusiness) {
     zoomToBoundsOnClick: true
   });
   var regions = [];
-  filteredBusiness.forEach(function(b) {
+  filteredBusiness.forEach(function(b, i) {
     var marker = L.marker(L.latLng(b.latitude, b.longitude), {title: b.name, id: b.business_id});
-    marker.bindPopup(b.name);
+    marker.bindPopup('Ranking: #' + (i + 1) + '. ' + b.name + '<br>' + b.address);
     marker.on('click', function() {highlightSelection(b.business_id);});
     regions.push(marker);
     // markers.addLayer(marker);
@@ -700,6 +700,36 @@ function addFilteredBusinessMarkers(filteredBusiness) {
   markers.addLayers(regions);
   map.addLayer(markers);
   // map.fitBounds(markers.getBounds());
+}
+
+function addTopBusinessMarkers(topBusiness) {
+  // addBusinessList(topBusiness);
+  if (markers) {
+    if (Array.isArray(markers)) {
+      markers.forEach(function(m) {
+        map.removeLayer(m);
+      })
+    }
+    else {
+      map.removeLayer(markers);
+    }
+  }
+  // if (markers) {map.removeLayer(markers);}
+  var markergroup = []
+  markers = [];
+  topBusiness.forEach(function(b, i) {
+    marker = new L.marker(L.latLng(b.latitude, b.longitude), {title: b.name, id: b.business_id});
+    marker.bindPopup('Ranking: #' + (i + 1) + '. ' + b.name + '<br>' + b.address);
+    marker.on('click', function() {highlightSelection(b.business_id);});
+    markers.push(marker);
+    map.addLayer(marker);
+    markergroup.push(marker);
+    // marker.addTo(map);
+  });
+  markers[0].openPopup();
+  // map.addLayer(markers);
+  var group = new L.featureGroup(markers);
+  map.fitBounds(group.getBounds().pad(3.0));
 }
 
 function highlightSelection(bid) {
@@ -751,24 +781,32 @@ function addFilterSliders() {
 }
 
 function sliderFunction() {
-  var data = null;
+  // var data = null;
   if (!categoryBusiness) {
+    if (!business) return;
     data = business;
+    updateScore(data);
+    updateStars(data);
+    business = rankBusiness(data);
+    addBusinessList(business);
+    addTopBusinessMarkers(business.slice(0,5));
   }
   else {
     data = categoryBusiness;
+    updateScore(data);
+    updateStars(data);
+    categoryBusiness = rankBusiness(data);
+    addBusinessList(categoryBusiness);
+    addTopBusinessMarkers(categoryBusiness.slice(0,5));
   }
-  if (data == null) {
-    return;
-  }
-  updateScore(data);
-  updateStars(data);
-  business = rankBusiness(data);
-  addBusinessList(business);
-  var i = 0
-  var a = business.find(function(b) {i += 1; return b.name == 'Fu Sheng'});
-  console.log(i);
-  // console.log(a);
+  test = categoryBusiness.slice(0,5);
+  // if (data == null) {
+  //   return;
+  // }
+
+  // var i = 0
+  // var a = business.find(function(b) {i += 1; return b.name == 'Fu Sheng'});
+  // console.log(i);
 }
 
 // var testButton = d3.select('#test_button').on('click', testfunc);
