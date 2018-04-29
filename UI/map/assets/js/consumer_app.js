@@ -186,6 +186,7 @@ function zoomToStateFeature(e) {
 }
 
 function addCityList(cities) {
+  resetSliders();
   cityList.selectAll('option')
             .data(cities)
             .enter()
@@ -201,6 +202,7 @@ function addCityList(cities) {
 
 // define mouse click zoom effect for city
 function zoomToCityFeature(e) {
+  resetSliders();
   var cityInfo = e.target.feature.properties;
   var center = [cityInfo.latitude, cityInfo.longitude];
   var bounds = resizeBounds(e.target.getBounds(), 0.3)
@@ -213,6 +215,7 @@ function zoomToCityFeature(e) {
 }
 
 function zoomToCity() {
+  resetSliders();
   city = $('#city_list').val()
   var cityInfo;
   citiesData.features.forEach(function(c) {
@@ -261,7 +264,16 @@ function getCategories(business) {
 }
 
 function addBusinessMarkers() {
-  if (markers) {map.removeLayer(markers);}
+  if (markers) {
+    if (Array.isArray(markers)) {
+      markers.forEach(function(m) {
+        map.removeLayer(m);
+      })
+    }
+    else {
+      map.removeLayer(markers);
+    }
+  }
   markers = L.markerClusterGroup({
     chunkedLoading: true,
     showCoverageOnHover: false,
@@ -292,6 +304,12 @@ function updateScore(data) {
       b.score = 1;
     });
   }
+  var max = 0;
+  var index = 0;
+  aspectWeights.forEach(function(a, i) {
+    if (a > max) {index = i};
+  })
+  aspectWeights[index] *= 10000;
   data.map(function(b) {
     b.score = 0;
     aspects.forEach(function(a, i) {
@@ -402,7 +420,13 @@ function addBusinessList(businessList) {
 
 function selectRest() {
   var businessId = $('#rest_list').val();
-  var selectedBusiness = business.find(function(b) {return b.business_id == businessId;});
+  var i;
+  var name = '';
+  var selectedBusiness = business.find(function(b) { return b.business_id == businessId;});
+  // test = selectedBusiness;
+  // name = '#' + (i + 1) + '. ' + selectedBusiness.name;
+  // $('#rest_list').val(name).change();
+  // $('#rest_list').trigger("chosen:updated");
   highlightMarker(businessId);
   showCheckin(businessId);
   drawWordCloud(selectedBusiness['good words'], true);
@@ -417,6 +441,25 @@ function selectRest() {
 }
 
 function highlightMarker(bid) {
+  if (Array.isArray(markers)) {
+    markers.forEach(function(m, i) {
+      if (bid === m.options.id) {
+        var latLngs = [ m.getLatLng() ];
+        var markerBounds = L.latLngBounds(latLngs);
+        m.openPopup();
+        // console.log(m);
+        // map.setView([m._latlng.lat, m._latlng.lng], 18);
+        map.fitBounds(markerBounds);
+        return;
+      }
+    });
+  }
+  if (!categoryBusiness) {
+    addBusinessMarkers(business);
+  }
+  else {
+    addFilteredBusinessMarkers(categoryBusiness);
+  }
   markers.eachLayer(function(m) {
     if (bid === m.options.id) {
       markers.zoomToShowLayer(m, function() {m.openPopup();});
@@ -527,6 +570,7 @@ function dispHourCheckin(businessId, day) {
   var checkinHourScale = d3.scaleLinear().range([0, checkinWidth * 0.80]).domain([0,24]);
   var checkinHeight = d3.select('#hour_checkin_svg').node().getBoundingClientRect().height;
   var checkinCountScale = d3.scaleLinear().range([0, checkinHeight * 0.6]);
+  if (!checkins[businessId]) return;
   var checkin = checkins[businessId][day]
   if (checkin) {
     var checkinHourAxis = d3.axisBottom(checkinHourScale);
@@ -658,6 +702,7 @@ function addCategoryList(categories) {
 }
 
 function filterCategory() {
+  resetSliders();
   var category = $('#category_list').val();
   categoryBusiness = business.filter(function(b) {
     return b.categories.constructor === Array ? b.categories.includes(category) : b.categories === category;
@@ -676,7 +721,16 @@ function filterCategory() {
 
 function addFilteredBusinessMarkers(filteredBusiness) {
   addBusinessList(filteredBusiness);
-  if (markers) {map.removeLayer(markers);}
+  if (markers) {
+    if (Array.isArray(markers)) {
+      markers.forEach(function(m) {
+        map.removeLayer(m);
+      })
+    }
+    else {
+      map.removeLayer(markers);
+    }
+  }
   markers = L.markerClusterGroup({
     chunkedLoading: true,
     showCoverageOnHover: false,
@@ -734,7 +788,9 @@ function addTopBusinessMarkers(topBusiness) {
 
 function highlightSelection(bid) {
   showCheckin(bid);
-  var selectedBusiness = business.find(function(b) {return b.business_id == bid;});
+  var j;
+  var selectedBusiness = business.find(function(b, i) {j = i; return b.business_id == bid;});
+  // var name = '#' + (j + 1) + '. ' + selectedBusiness.name;
   dispStar(selectedBusiness);
   drawRating(selectedBusiness);
   data = categoryBusiness;
@@ -744,8 +800,7 @@ function highlightSelection(bid) {
   selectedBusiness = data.find(function(b) {return b.business_id == bid;});
   drawWordCloud(selectedBusiness['good words'], true);
   drawWordCloud(selectedBusiness['bad words'], false);
-  console.log(selectedBusiness);
-  $('#rest_list').val(selectedBusiness.name);
+  // $('#rest_list').val(name);
   $('#rest_list').trigger('chosen:updated');
   // var selected = restList.selectAll('option')
   //           .filter(function(o) {return o.business_id === bid})
@@ -789,7 +844,8 @@ function sliderFunction() {
     updateStars(data);
     business = rankBusiness(data);
     addBusinessList(business);
-    addTopBusinessMarkers(business.slice(0,5));
+    addTopBusinessMarkers(business.slice(0,10));
+    test = business.slice(0,10);
   }
   else {
     data = categoryBusiness;
@@ -797,9 +853,10 @@ function sliderFunction() {
     updateStars(data);
     categoryBusiness = rankBusiness(data);
     addBusinessList(categoryBusiness);
-    addTopBusinessMarkers(categoryBusiness.slice(0,5));
+    addTopBusinessMarkers(categoryBusiness.slice(0,10));
+    test = categoryBusiness.slice(0,10);
   }
-  test = categoryBusiness.slice(0,5);
+  // test = categoryBusiness.slice(0,4);
   // if (data == null) {
   //   return;
   // }
@@ -807,6 +864,14 @@ function sliderFunction() {
   // var i = 0
   // var a = business.find(function(b) {i += 1; return b.name == 'Fu Sheng'});
   // console.log(i);
+}
+
+function resetSliders() {
+  $('#Food').val(0.5);
+  $('#Price').val(0.5);
+  $('#Service').val(0.5);
+  $('#Ambience').val(0.5);
+  $('#Misc').val(0.5);
 }
 
 // var testButton = d3.select('#test_button').on('click', testfunc);
